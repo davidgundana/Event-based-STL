@@ -31,11 +31,14 @@ Required:
     -	NetworkX - https://networkx.org/documentation/stable/install.html
     -	nltk - https://www.nltk.org/install.html
 
+*** The python packages are only used to generate control. In order to run a simulation/experiment Matlab, Unity, or physical robots are required. Packages to simulate robotic systems in Matlab and Unity are provided in this repository. ***
+
+
 Optional:
--	Matlab (for simulation purposes)
+-	Matlab (Required to run Matlab simulations)
     -	Required toolbox:
         -	Instrument Control Toolbox	
--	Unity (for simulation purposes)
+-	Unity (Required to run Unity simulations)
 -	Python Libraries
     -	Spot - https://spot.lrde.epita.fr/install.html
 
