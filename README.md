@@ -38,6 +38,7 @@ Optional:
 -	Matlab (Required to run Matlab simulations)
     -	Required toolbox:
         -	Instrument Control Toolbox	
+    -	All subfolders must be added to your Matlab path
 -	Unity (Required to run Unity simulations)
 -	Python Libraries
     -	Spot - https://spot.lrde.epita.fr/install.html
