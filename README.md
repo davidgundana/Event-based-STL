@@ -79,8 +79,12 @@ Optional:
 ## Preparing a Specification ##
 To prepare a specification for execution, run the file “runEvBasedSTL.py”. This script will open a GUI and ask for several different inputs. 
 
-<img width="600" alt="image" src="https://media.github.coecis.cornell.edu/user/5533/files/ad480c13-9232-4b4c-b4e8-a71e0013fae6">
+<img width="749" alt="image" src="https://user-images.githubusercontent.com/49731085/148837865-67923ff5-a16c-473e-b4e1-1be6b56db601.png">
 
+<!-- <img width="600" alt="image" src="https://media.github.coecis.cornell.edu/user/5533/files/ad480c13-9232-4b4c-b4e8-a71e0013fae6">
+ -->
+ 
+ 
 - Number of Robots: Number of controllable robots that the specification includes
 - Frequency (Hz): Frequency at which the specification is run. 
 - Max Velocity: Velocity bounds for each robot (x,y,theta)
