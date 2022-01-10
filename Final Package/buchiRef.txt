@@ -1,0 +1,11 @@
+accept_init:
+  if
+  :: (((!(props.alarm1)) && (props.pred1)) || ((!(props.alarm2)) && (props.pred1)) || ((props.pred0) && (props.pred1))) -> goto accept_init
+  :: ((props.alarm1) && (props.alarm2) && (!(props.pred0)) && (props.pred1)) -> goto T0_S1
+  fi;
+T0_S1:
+  if
+  :: ((props.pred0) && (props.pred1)) -> goto accept_init
+  :: ((!(props.pred0)) && (props.pred1)) -> goto T0_S1
+  fi;
+}
