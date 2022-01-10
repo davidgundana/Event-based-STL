@@ -362,7 +362,7 @@ class cmdInp:
         # DEBUG MESSAGE MODE TOGGLE
         # Turn this value to "1" if you want to enter an example message from Unity/Matlab as an input. Otherwise, inputs
         # above will be used
-        debugMessage = 1
+        debugMessage = 0
 
         if not debugMessage:
             for i in range(int(f.M)):
@@ -407,7 +407,7 @@ class cmdInp:
 
 
 if __name__ == "__main__":
-    loadOnStart = 0
+    loadOnStart = 1
     if loadOnStart == 0:
         f = formData()
         f.makeForm()

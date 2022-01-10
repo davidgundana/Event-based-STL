@@ -546,11 +546,11 @@ class activateProp:
 
     def intersectPoint(self, x1, y1, x2, y2, x3, y3, x4, y4):
         denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            ua = np.divide(((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)), denom)
+            ub = np.divide(((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)), denom)
 
-        ua = np.divide(((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)), denom)
-        ub = np.divide(((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)), denom)
-
-        isect = (ua>=0)*(ub>=0)*(ua<=1)*(ub<=1)
+            isect = (ua>=0)*(ub>=0)*(ua<=1)*(ub<=1)
 
         return isect
 
