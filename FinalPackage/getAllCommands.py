@@ -99,16 +99,16 @@ class getAllCommands:
         self.conditions = self.conditions[1:,:]
         self.conditions = np.unique(self.conditions, axis = 0)
 
-    def potentialConflicts(self,pos,posRef,ub,t):
+    def potentialConflicts(self,act,pos,posRef,ub,t,props_, wall_, tempInp_):
         # Lets check things that can be activated for each robot
         # These are the indexes of the inputs for the robot
         badConditions = []
         for i in range(np.size(self.conditions, 0)):
-            activate = activateProp.activateProp(self.State, self.currState, pos, posRef,
-                                                 t, self.maxV, self.M, 1, self.conditions[i])
+            activate = activateProp.activateProp.activate(act, self.currState, props_, wall_, tempInp_, self.conditions[i], pos, posRef, t,1)
             if len(activate.robustness) > 0:
                 if any(x < 0 for x in activate.robustness):
                     badConditions.append(self.conditions[i])
+
         # the badConditions variable shows which combinations of inputs result in a negative robustness score
         # for a proposition
         currInput = self.State.input[::2].astype(int)
@@ -140,19 +140,20 @@ class getAllCommands:
         self.trackInputs(pos, posStart, posRef,t)
 
         #Find Propositions to activate based on the current state and transitiosn to an accepting state
-        activate = activateProp.activateProp(self.State, currState, pos, posRef, t, self.maxV, self.M, 0, [])
+        act = activateProp.activateProp(self.State, currState, pos, posRef, t, self.maxV, self.M, 0, [])
+        props_,wall_,tempInp_ = activateProp.activateProp.prepActivate(act,pos,posRef)
+        activate = activateProp.activateProp.activate(act,currState,props_,wall_,tempInp_,[],pos,posRef,t,0)
         print(activate.props2Activate)
         self.currState = activate.currState
 
         # Toggle to turn on/off pre failure warnings
-        preFailure = 1
+        preFailure = 0
         if preFailure:
             # this is for a pre-failure warning. We want to see what happens if things change with the inputs
             self.findConditions(activate)
 
             # Check for potential conflicts if additional inputs are sensed
-            self.potentialConflicts(pos, posRef, ub, t)
-
+            self.potentialConflicts(act,pos, posRef, ub, t,props_, wall_, tempInp_)
         # create the new STL specification with the activated propositions
         ia = [list(self.State.controllableProp).index(s) for s in list(activate.props2Activate)]
         phiIndex = [self.State.controllablePropOrder[s] for s in ia]

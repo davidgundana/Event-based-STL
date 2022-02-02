@@ -27,8 +27,8 @@ class prep:
 
     def prepSpecification(self,text1,master):
         # Track status
-        percentages = list(np.linspace(0,np.size(self.State),25))
-        percentages = percentages[1:-1]
+        percentages = list(np.linspace(0, 100, np.size(self.State)+1))
+        percentages = percentages[1:]
         reference = 0
 
         # Transform complex conditions for a transition to a set of  values (0,1,2). This will help with
@@ -100,21 +100,19 @@ class prep:
 
 
             # Update status of preparation
-            if reference < np.size(percentages):
-                if i > percentages[reference]:
-                    percentage = int(round(percentages[reference]/np.size(self.State) * 50 + 50))
-                    reference += 1
-                    text1.configure(state='normal')
-                    text1.delete("end-1l", "end")
-                    text1.configure(state='disabled')
-                    complete_status = str(percentage) + '% complete'
-                    message = '\nPreparing specification. ' + complete_status
-                    runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData,text1,master,message)
+            percentage = round(percentages[i],2)
+            text1.configure(state='normal')
+            text1.delete("end-1l", "end")
+            text1.configure(state='disabled')
+            complete_status = str(percentage) + '% complete'
+            message = '\nPreparing Buchi. ' + complete_status
+            runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData,text1,master,message)
+
 
         percentage = 100
         text1.configure(state='normal')
         text1.delete("end-1l", "end")
         text1.configure(state='disabled')
         complete_status = str(percentage) + '% complete'
-        message = '\nPreparing specification. ' + complete_status
+        message = '\nPreparing Buchi. ' + complete_status
         runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData, text1, master, message)

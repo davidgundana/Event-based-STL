@@ -27,12 +27,12 @@ class formData:
         # Default spec location
         my_dir = os.path.dirname(os.path.abspath(__file__))
         my_dir2 = os.path.join(my_dir, 'Specs', '')
-        my_dir3 = os.path.join(my_dir, 'Maps', 'openMap.txt')
-        my_dir4 = os.path.join(my_dir, 'Maps', 'openNodes.txt')
-        my_dir = os.path.join(my_dir, 'Specs', 'specTest.txt')
+        my_dir3 = os.path.join(my_dir, 'Maps', 'paperMap.txt')
+        my_dir4 = os.path.join(my_dir, 'Maps', 'paperNodes.txt')
+        my_dir = os.path.join(my_dir, 'Specs', 'paperspec4.txt')
 
         self.default = np.array(
-            ['1', '5', '1.5,1.5,15', '-169,72,0,2', '-169,76,0'])  # pre-filled values
+            ['4', '5', '2,2,15,2,2,15,2,2,15,2,2,15', '4,22,0,20,23,0,36,25,0,5,22,0', '-169,76,0'])  # pre-filled values
         self.filename1 = my_dir  # Directory of Specification
         self.filename2 = my_dir2
         self.filename3 = my_dir3
@@ -222,12 +222,11 @@ class formData:
                                                  self.nodeGraph, self.nodeConnections)
             # Evaluating each transition formula at runtime can be expensive. this function simplifies the formulas.
             self.State = prepBuchi.prep(self.State,specattr.propositions,text1,master)
-            self.updateStatus(text1, master, '\nChecking for conflicts')
 
-            # Check for non intersecting sets in all transitions (Can be very expensive)
+            # self.updateStatus(text1, master, '\nChecking for conflicts')
+            # Check for non-intersecting sets in all transitions (Can be very expensive)
             # conf = checkForConflicts.check(self.State, self.M, text1, master)
             # self.Conflicts = conf
-
 
             elapsedT2 = time.time() - t2
             timeToFinish = 'The total time prepare the Event-based STL formula was ' + str(elapsedT2) + ' seconds.'
@@ -414,8 +413,8 @@ if __name__ == "__main__":
         tk.mainloop()
         if f.ready:
             filename = f.name
-            filePathP = 'Pickle Files/'+filename+'.pkl'
-            filePathM = 'Matlab Files/'+filename+'.mat'
+            filePathP = 'PickleFiles/'+filename+'.pkl'
+            filePathM = 'MatlabFiles/'+filename+'.mat'
             my_dir = os.path.dirname(os.path.abspath(__file__))
             pickle_file_path = os.path.join(my_dir, filePathP)
 
@@ -430,7 +429,7 @@ if __name__ == "__main__":
             savemat(filePathM, dict)
     elif loadOnStart == 1:
         my_dir = os.path.dirname(os.path.abspath(__file__))
-        pickle_file_path = os.path.join(my_dir, 'Pickle Files', 'specTest.pkl')
+        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'paperspec4.pkl')
         with open(pickle_file_path, 'rb') as input:
             f = pickle.load(input)
         #Get the inputs for the function to get robot commands. Inputs can be from gui or from a copied message
@@ -441,7 +440,7 @@ if __name__ == "__main__":
     if runOnce and f.ready:
         # Time how long it takes to get a command.
         t = time.time()
-        # I.input[0] = 1
+        I.input[0] = 1
         # I.input[2] = 1
         # I.input[8] = 1
         # I.input[10] = 1

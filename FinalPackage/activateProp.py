@@ -18,43 +18,21 @@ class activateProp:
         self.propositions = State.propositions # propositions to evaluate
         self.props2Activate = [] # preallocate activated propositions
         self.currState = [] # Pre-allocate current state
-        self.locOfUncontrollable = []
+        self.locOfUncontrollable = [list(self.propositions).index(s) for s in list(self.uncontrollableProp)]
         self.input = []
         self.maxV = maxV
         self.weights = [.25,.75] #What is already true, what is false right now
         self.preF = preF
         self.conditions = conditions
         np.seterr(divide='ignore')
-        self.activate(currState,pos,posRef,t)
+        # self.activate(currState,pos,posRef,t)
 
-    def activate(self,currState,pos,posRef,t):
-        props = self.props
-        # Find the values of all parameters
-        if self.State.wall is not None and len(self.State.wall) != 0:
-            wall = self.State.wall
-            valuesOfControl = [eval(self.State.parameters[s], {'__builtins__': None},
-                                    {'pos': pos, 'np': np, 'posRef': posRef, 'wall': wall}) for s in range(np.size(self.State.parameters))]
-        else:
-            wall = []
-            valuesOfControl = [eval(self.State.parameters[s], {'__builtins__': None},
-                                    {'pos': pos, 'np': np, 'posRef': posRef}) for s in range(np.size(self.State.parameters))]
+    def activate(self,currState,props,wall,input,conditions,pos,posRef,t,preF):
+        # t2 = time.time()
+        self.input = input
+        self.conditions = conditions
+        self.preF = preF
 
-        # change from true/false to 1/0
-        for i in range(np.size(valuesOfControl)):
-            if valuesOfControl[i]:
-                valuesOfControl[i] = 1
-            elif not valuesOfControl[i]:
-                valuesOfControl[i] = 0
-
-        self.input = self.State.input[::2].astype(int)
-        self.input = self.input[:np.size(self.uncontrollableProp)]
-
-        # Assign all for the values to the propositions
-        for i in range(np.size(self.controllableProp)):
-            propName = self.controllableProp[i]
-            exec('props.' + propName + ' = ' + str(valuesOfControl[i]))
-
-        valuesOfControl = np.asarray(valuesOfControl)
         if self.preF == 0:
             # If we are not checking for pre-failure warnings we need the real value of the uncontrollable props
             for i in range(np.size(self.uncontrollableProp)):
@@ -66,21 +44,12 @@ class activateProp:
                 exec('props.' + propName + ' = ' + str(self.conditions[i]))
 
 
-        locOfControllable = [list(self.propositions).index(s) for s in list(self.controllableProp)]
-        self.locOfUncontrollable = [list(self.propositions).index(s) for s in list(self.uncontrollableProp)]
-
         #find the transition that is being made based on the conditions
         conditions = self.State.State[currState].cond
-        evalCond = [eval(s, {'__builtins__': None}, {'props': props}) for s in conditions]
-        for i in range(np.size(evalCond)):
-            if evalCond[i]:
-                evalCond[i] = 1
-            elif not evalCond[i]:
-                evalCond[i] = 0
+        evalCond = eval(','.join(conditions), {'__builtins__': None}, {'props': props})
+        evalCond = np.multiply(evalCond,1)
 
-        evalCond = np.array(evalCond)
         result = np.array(self.State.State[currState].result)
-
         if np.sum(evalCond) != 0:
             potentialNextStates = result[np.where(evalCond == 1)[0]]
         else:
@@ -90,20 +59,17 @@ class activateProp:
                         propName = self.State.phi[i].prop_label[0]
                         exec('props.' + propName + ' = ' '1')
             evalCond = [eval(s, {'__builtins__': None}, {'props': props}) for s in conditions]
-            for i in range(np.size(evalCond)):
-                if evalCond[i]:
-                    evalCond[i] = 1
-                elif not evalCond[i]:
-                    evalCond[i] = 0
+            evalCond = np.multiply(evalCond, 1)
 
-            evalCond = np.array(evalCond)
             result = np.array(self.State.State[currState].result)
             potentialNextStates = result[np.where(evalCond == 1)[0]]
-
+        # print(time.time()-t2)
+        # t3 = time.time()
         # First find all accepting states that can be reached given uncontrollable propositions
         reachableAcceptCycle = self.findAcceptingCycle()
-
+        # print(time.time()-t3)
         # Find all routes from all next states
+        # t4 = time.time()
         paths2Consider = []
         for i in range(np.size(potentialNextStates)):
             potState = potentialNextStates[i]
@@ -116,6 +82,7 @@ class activateProp:
 
 
         paths2Consider = [item for sublist in paths2Consider for item in sublist]
+
         # We only care about the first transition for now
         row2Del = []
         for s in range(np.size(paths2Consider, 0)):
@@ -152,14 +119,6 @@ class activateProp:
                 pass
 
             if np.size(acceptable != 0):
-                # notViable = []
-                # for j in range(np.size(transitionOptions, 0)):
-                #     locOfTrue = np.where(transitionOptions[j,:]==0)[0].tolist()
-                #     locOfCurrent = np.where(valuesOfControl == 1)[0].tolist()
-                #     if (set(locOfTrue) & set(locOfCurrent)):
-                #         # We can not falsify a propostion a transition option
-                #         notViable.append(j)
-                # transitionOptions = np.delete(transitionOptions,notViable,0)
                 if np.size(transitionOptions,0) != 0:
                     stateRef = paths2Consider[i][0] * np.ones((np.size(transitionOptions, 0), 1), dtype=int)
                     nextRef = paths2Consider[i][1] * np.ones((np.size(transitionOptions, 0), 1), dtype=int)
@@ -172,10 +131,6 @@ class activateProp:
 
         allTransitions = np.unique(allTransitionsWithState[1:, :-1], axis=0)
         allTransitionsWithState = allTransitionsWithState[1:, :]
-        allTransitionsWithNextState = allTransitionsWithNextState[1:, :]
-
-        propRef = list(set(propRef))
-
         # check if any propositions have until tag
         allTransitions = self.checkUntil(allTransitions)
 
@@ -200,10 +155,9 @@ class activateProp:
 
         propsLoc = (np.where(trans2Make == 1)[0]).tolist()
         self.props2Activate = [self.controllableProp[element] for element in propsLoc]
+        # print(time.time() - t4)
 
-        # if self.preF == 0 and len(self.props2Activate) != 0:
-        #     print(self.props2Activate)
-
+        return self
     def findAcceptingCycle(self):
         reachableAccepting = []
         for j in range(np.size(self.State.acceptingWithCycle)):
@@ -214,15 +168,16 @@ class activateProp:
                 stateFrom = comeFrom[k]
                 idOfResult = np.where(self.State.State[stateFrom].result == transToAccept)[0][0]
                 condOfI = np.asarray(self.State.State[stateFrom].condCNF[idOfResult])
-                condOfI2 = np.zeros((1, np.size(condOfI[0])),dtype = int)
+                # condOfI2 = np.zeros((1, np.size(condOfI[0])),dtype = int)
+                #
+                # for ll in range(np.size(condOfI,0)):
+                #     tempStr = condOfI[ll,:]
+                #     condOfI2 = np.append(condOfI2, [tempStr], axis=0)
+                # condOfI2 = condOfI2[1:,:]
+                #
+                # allConds = np.append(allConds,condOfI2, axis = 0)
+                allConds = np.append(allConds,condOfI, axis = 0)
 
-                for ll in range(np.size(condOfI,0)):
-                    tempStr = condOfI[ll,:]
-                    #tempStr = np.fromstring(tempStr, dtype=int, sep=' ')
-                    condOfI2 = np.append(condOfI2, [tempStr], axis=0)
-                condOfI2 = condOfI2[1:,:]
-
-                allConds = np.append(allConds,condOfI2, axis = 0)
 
             allConds = allConds[:,self.locOfUncontrollable]
             allConds = np.unique(allConds, axis = 0)
@@ -337,14 +292,15 @@ class activateProp:
                     #Check to see how far the segments are. A buffer may be needed
                     pt1 = startPos
                     pt2 = self.State.nodes[idx[i], 0:2]
-                    ptOfI1 = map[:, 0:2]
-                    ptOfI2 = map[:, 2:4]
-                    dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
-                    dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-                    if min(dist2closest1) > .5 or min(dist2closest2) > .5:
-                        closestStartInd = idx[i]
-                        closestStart = self.State.nodes[closestStartInd]
-                        break
+                    if np.all(pt1 != pt2):
+                        ptOfI1 = map[:, 0:2]
+                        ptOfI2 = map[:, 2:4]
+                        dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
+                        dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
+                        if min(dist2closest1) > .5 or min(dist2closest2) > .5:
+                            closestStartInd = idx[i]
+                            closestStart = self.State.nodes[closestStartInd]
+                            break
 
             # If no closest start or goal can be found the point can not be reached given map and nodes
             if 'closestStart' in locals() or 'closestGoal' in locals():
@@ -596,3 +552,28 @@ class activateProp:
             pass
 
         return dist
+
+    def prepActivate(self,pos,posRef):
+        props = self.props
+        # Find the values of all parameters
+        if self.State.wall is not None and len(self.State.wall) != 0:
+            wall = self.State.wall
+            valuesOfControl = eval(','.join(self.State.parameters), {'__builtins__': None},
+                                    {'pos': pos, 'np': np, 'posRef': posRef, 'wall': wall})
+
+        else:
+            wall = []
+            valuesOfControl = eval(','.join(self.State.parameters), {'__builtins__': None},
+                                    {'pos': pos, 'np': np, 'posRef': posRef})
+        # change from true/false to 1/0
+        valuesOfControl = np.multiply(valuesOfControl,1)
+
+        input = self.State.input[::2].astype(int)
+        input = input[:np.size(self.uncontrollableProp)]
+
+        # Assign all for the values to the propositions
+        for i in range(np.size(self.controllableProp)):
+            propName = self.controllableProp[i]
+            exec('props.' + propName + ' = ' + str(valuesOfControl[i]))
+
+        return props, wall, input

@@ -102,8 +102,8 @@ class Parsed:
         # If we can find a direction use it, if not we can calculate a better one at runtime
         for i in range(len(dirRef)):
             try:
-                self.dir.append(re.search(r'(?=p).+(?<=(\+|\-)\d)', dirRef[i])[0])
-                self.point.append(-1 * int(re.search('(?=(\+|\-)).+(?=\))', dirRef[i])[0]))
+                self.dir.append(re.search(r'(?=p).+(?=\))', dirRef[i])[0])
+                self.point.append(-1 * float(re.search('(?=(\+|\-)).+(?=\))', dirRef[i])[0]))
             except:
                 pass
         self.point = np.asarray(self.point)

@@ -186,13 +186,41 @@ class specInfo:
                 graph[i, State[i].result[j]] = 1
 
         self.graph = graph
+
+        # Find accepting states with a cycle
+        acceptingWithCycle = []
+        for j in range(len(self.accepting_states)):
+            if self.graph[self.accepting_states[j], self.accepting_states[j]] != 1:
+                (cost, rute) = matrixDijkstra.dijkstra(self.graph, self.accepting_states[j], self.accepting_states[j])
+            else:
+                cost = 1
+                rute = np.array([self.accepting_states[j], self.accepting_states[j]])
+            costRef = np.size(rute, 0) - 1
+            if not cost > 10000 or costRef == cost:
+                if cost == 1:
+                    acceptingWithCycle.append(self.accepting_states[j])
+
+        self.acceptingWithCycle = acceptingWithCycle
+
+        # Find all routes
+        percentages = list(np.linspace(0, 100, np.size(self.graph, 0) + 1))
+        percentages = percentages[1:]
         nRoutes = [[]] * len(self.graph)
         for i in range(np.size(self.graph,0)):
             tempRoute = []
-            for j in range(np.size(self.graph,1)):
-                allPaths = self.findNRoutes(i,j)
+            for j in range(np.size(self.acceptingWithCycle,0)):
+                goTo = self.acceptingWithCycle[j]
+                allPaths = self.findNRoutes(i,goTo)
                 tempRoute.append(allPaths)
             nRoutes[i] = tempRoute
+
+            percentage = round(percentages[i], 2)
+            text1.configure(state='normal')
+            text1.delete("end-1l", "end")
+            text1.configure(state='disabled')
+            complete_status = str(percentage) + '% complete'
+            message = '\nFinding Routes through Buchi ' + complete_status
+            runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData, text1, master, message)
 
         self.nRoutes = nRoutes
         # Because of the naming convention, the o
@@ -215,19 +243,7 @@ class specInfo:
         self.uncontrollableProp = np.setdiff1d(propositions, controllableProp).tolist()
 
 
-        acceptingWithCycle = []
-        for j in range(len(self.accepting_states)):
-            if self.graph[self.accepting_states[j], self.accepting_states[j]] != 1:
-                (cost, rute) = matrixDijkstra.dijkstra(self.graph, self.accepting_states[j], self.accepting_states[j])
-            else:
-                cost = 1
-                rute = np.array([self.accepting_states[j], self.accepting_states[j]])
-            costRef = np.size(rute, 0) - 1
-            if not cost > 10000 or costRef == cost:
-                if cost == 1:
-                    acceptingWithCycle.append(self.accepting_states[j])
 
-        self.acceptingWithCycle = acceptingWithCycle
         # Create a nodegraph using the nodes and map
         if len(self.nodeGraph) == 0:
             nodeGraph = np.zeros((np.size(self.nodes, 0), np.size(self.nodes, 0)))
@@ -373,7 +389,7 @@ class specInfo:
         return dist
 
     def findNRoutes(self, startState, endState):
-        numP = 10
+        numP = 5
         G = nx.DiGraph()
         G.add_nodes_from(range(0, np.size(self.graph, 0)))
         for jj in range(np.size(self.graph, 0)):
