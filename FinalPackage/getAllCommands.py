@@ -108,7 +108,6 @@ class getAllCommands:
             if len(activate.robustness) > 0:
                 if any(x < 0 for x in activate.robustness):
                     badConditions.append(self.conditions[i])
-            print(activate.robustness)
         # the badConditions variable shows which combinations of inputs result in a negative robustness score
         # for a proposition
         currInput = self.State.input[::2].astype(int)
@@ -144,6 +143,7 @@ class getAllCommands:
         props_,wall_,tempInp_ = activateProp.activateProp.prepActivate(act,pos,posRef)
         activate = activateProp.activateProp.activate(act,currState,props_,wall_,tempInp_,[],pos,posRef,t,0)
         print(activate.props2Activate)
+        self.props2Activate = activate.props2Activate
         self.currState = activate.currState
 
         # Toggle to turn on/off pre failure warnings
@@ -155,7 +155,7 @@ class getAllCommands:
             # Check for potential conflicts if additional inputs are sensed
             self.potentialConflicts(act,pos, posRef, ub, t,props_, wall_, tempInp_)
         # create the new STL specification with the activated propositions
-        ia = [list(self.State.controllableProp).index(s) for s in list(activate.props2Activate)]
+        ia = [list(self.State.controllableProp).index(s) for s in list(self.props2Activate)]
         phiIndex = [self.State.controllablePropOrder[s] for s in ia]
         phi = [self.State.phi[s] for s in phiIndex]
 

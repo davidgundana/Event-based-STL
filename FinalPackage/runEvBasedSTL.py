@@ -380,7 +380,7 @@ class cmdInp:
 
         else:
             # Example message from Unity/Matlab
-            Mes = '4 22 0 20 23 0 36 25 0 5 22 0 4 22 0 20 23 0 36 25 0 5 22 0 -169 76 0 2.4 0 1 1 2.4 0 0 1 2.2 1 2.2 1 2.2 1 2.2 0 0 0 0 0 0 0 0'
+            Mes = '4.0705 20.8021 0 19.4432 21 -1.0783e-11 36 25 0 4.8297 20.8423 0 4 22 0 20 23 0 36 25 0 5 22 0 -169 76 0 3.6 0 5 1 2.2 1 2.8 1 2 1 2 1 2 1 2 1 2.6 1 2.6 1 2.6 1 2.6'
             parsedMes = Mes.split()
             for i in range(int(f.M)):
                 self.posX = np.append(self.posX, float(parsedMes[3 * i]))
@@ -406,7 +406,7 @@ class cmdInp:
 
 
 if __name__ == "__main__":
-    loadOnStart = 0
+    loadOnStart = 1
     if loadOnStart == 0:
         f = formData()
         f.makeForm()
@@ -441,15 +441,14 @@ if __name__ == "__main__":
         # Time how long it takes to get a command.
         t = time.time()
         I.input[0] = 1
-        # I.input[2] = 1
+        I.currTime = .1
+        I.input[2] = 1
         # I.input[8] = 1
         # I.input[10] = 1
         # I.currState = 1
         # I.currTime = I.currTime+1/float(f.freq)
         # vx, vy, vtheta, I.currState, distTotal, newinput, I.until = getCMD(f,[0.1069313], [65.41315], [0.3481325], [0.02], [54.13], [0.], [0.12], [67.55], [191.6], 35.54, 0.0, 2, np.array([ 1.,   26.72,  0.,    0. ]), 1)
 
-        isect = activateProp.intersectPoint([], I.posX[0], I.posY[0], I.posXPerson[0], I.posYPerson[0],
-                                            f.map[:, 0], f.map[:, 1], f.map[:, 2], f.map[:, 3])
         vx, vy, vtheta, I.currState, distTotal, newinput, I.until = getCMD(f,I.posX,I.posY,I.posTheta,I.posXinit,I.posYinit,
             I.posThetainit,I.posXPerson,I.posYPerson,I.posThetaPerson,I.currTime,I.startTime,I.currState, I.input,I.until)
         elapsedT = time.time() - t

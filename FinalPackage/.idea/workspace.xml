@@ -2,14 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="4263b601-8e74-4f59-a8c9-9548d1cb286e" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../.idea/Event-based-STL.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/Event-based-STL.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MatlabFiles/Plotting/plotLive.m" beforeDir="false" afterPath="$PROJECT_DIR$/MatlabFiles/Plotting/plotLive.m" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MatlabFiles/RunTCPSim.m" beforeDir="false" afterPath="$PROJECT_DIR$/MatlabFiles/RunTCPSim.m" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MatlabFiles/TCPServer.m" beforeDir="false" afterPath="$PROJECT_DIR$/MatlabFiles/TCPServer.m" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/MatlabFiles/paperdata1.mat" beforeDir="false" afterPath="$PROJECT_DIR$/MatlabFiles/paperdata1.mat" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/activateProp.py" beforeDir="false" afterPath="$PROJECT_DIR$/activateProp.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/clientMatlab.py" beforeDir="false" afterPath="$PROJECT_DIR$/clientMatlab.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/barrier.py" beforeDir="false" afterPath="$PROJECT_DIR$/barrier.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/getAllCommands.py" beforeDir="false" afterPath="$PROJECT_DIR$/getAllCommands.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/runEvBasedSTL.py" beforeDir="false" afterPath="$PROJECT_DIR$/runEvBasedSTL.py" afterDir="false" />
     </list>
@@ -88,111 +84,70 @@
       <screen x="0" y="0" width="3440" height="1400" />
     </state>
     <state x="604" y="148" key="FileChooserDialogImpl/0.0.3440.1400@0.0.3440.1400" timestamp="1643821082100" />
-    <state width="1611" height="239" key="GridCell.Tab.0.bottom" timestamp="1643823412062">
+    <state width="1940" height="239" key="GridCell.Tab.0.bottom" timestamp="1643832858698">
       <screen x="0" y="0" width="3440" height="1400" />
     </state>
-    <state width="1611" height="239" key="GridCell.Tab.0.bottom/0.0.3440.1400@0.0.3440.1400" timestamp="1643823412062" />
-    <state width="1611" height="239" key="GridCell.Tab.0.center" timestamp="1643823412062">
+    <state width="1940" height="239" key="GridCell.Tab.0.bottom/0.0.3440.1400@0.0.3440.1400" timestamp="1643832858698" />
+    <state width="1940" height="239" key="GridCell.Tab.0.center" timestamp="1643832858698">
       <screen x="0" y="0" width="3440" height="1400" />
     </state>
-    <state width="1611" height="239" key="GridCell.Tab.0.center/0.0.3440.1400@0.0.3440.1400" timestamp="1643823412062" />
-    <state width="1611" height="239" key="GridCell.Tab.0.left" timestamp="1643823412062">
+    <state width="1940" height="239" key="GridCell.Tab.0.center/0.0.3440.1400@0.0.3440.1400" timestamp="1643832858698" />
+    <state width="1940" height="239" key="GridCell.Tab.0.left" timestamp="1643832858698">
       <screen x="0" y="0" width="3440" height="1400" />
     </state>
-    <state width="1611" height="239" key="GridCell.Tab.0.left/0.0.3440.1400@0.0.3440.1400" timestamp="1643823412062" />
-    <state width="1611" height="239" key="GridCell.Tab.0.right" timestamp="1643823412062">
+    <state width="1940" height="239" key="GridCell.Tab.0.left/0.0.3440.1400@0.0.3440.1400" timestamp="1643832858698" />
+    <state width="1940" height="239" key="GridCell.Tab.0.right" timestamp="1643832858698">
       <screen x="0" y="0" width="3440" height="1400" />
     </state>
-    <state width="1611" height="239" key="GridCell.Tab.0.right/0.0.3440.1400@0.0.3440.1400" timestamp="1643823412062" />
-    <state width="1611" height="239" key="GridCell.Tab.1.bottom" timestamp="1643823416174">
+    <state width="1940" height="239" key="GridCell.Tab.0.right/0.0.3440.1400@0.0.3440.1400" timestamp="1643832858698" />
+    <state width="1940" height="239" key="GridCell.Tab.1.bottom" timestamp="1643832857393">
       <screen x="0" y="0" width="3440" height="1400" />
     </state>
-    <state width="1611" height="239" key="GridCell.Tab.1.bottom/0.0.3440.1400@0.0.3440.1400" timestamp="1643823416174" />
-    <state width="1611" height="239" key="GridCell.Tab.1.center" timestamp="1643823416173">
+    <state width="1940" height="239" key="GridCell.Tab.1.bottom/0.0.3440.1400@0.0.3440.1400" timestamp="1643832857393" />
+    <state width="1940" height="239" key="GridCell.Tab.1.center" timestamp="1643832857393">
       <screen x="0" y="0" width="3440" height="1400" />
     </state>
-    <state width="1611" height="239" key="GridCell.Tab.1.center/0.0.3440.1400@0.0.3440.1400" timestamp="1643823416173" />
-    <state width="1611" height="239" key="GridCell.Tab.1.left" timestamp="1643823416173">
+    <state width="1940" height="239" key="GridCell.Tab.1.center/0.0.3440.1400@0.0.3440.1400" timestamp="1643832857393" />
+    <state width="1940" height="239" key="GridCell.Tab.1.left" timestamp="1643832857393">
       <screen x="0" y="0" width="3440" height="1400" />
     </state>
-    <state width="1611" height="239" key="GridCell.Tab.1.left/0.0.3440.1400@0.0.3440.1400" timestamp="1643823416173" />
-    <state width="1611" height="239" key="GridCell.Tab.1.right" timestamp="1643823416174">
+    <state width="1940" height="239" key="GridCell.Tab.1.left/0.0.3440.1400@0.0.3440.1400" timestamp="1643832857393" />
+    <state width="1940" height="239" key="GridCell.Tab.1.right" timestamp="1643832857393">
       <screen x="0" y="0" width="3440" height="1400" />
     </state>
-    <state width="1611" height="239" key="GridCell.Tab.1.right/0.0.3440.1400@0.0.3440.1400" timestamp="1643823416174" />
+    <state width="1940" height="239" key="GridCell.Tab.1.right/0.0.3440.1400@0.0.3440.1400" timestamp="1643832857393" />
     <state x="325" y="38" key="SettingsEditor" timestamp="1643821139475">
       <screen x="0" y="0" width="3440" height="1400" />
     </state>
     <state x="325" y="38" key="SettingsEditor/0.0.3440.1400@0.0.3440.1400" timestamp="1643821139475" />
-    <state width="824" height="389" key="XDebugger.FullValuePopup" timestamp="1643823348390">
+    <state width="824" height="389" key="XDebugger.FullValuePopup" timestamp="1643828143455">
       <screen x="0" y="0" width="3440" height="1400" />
     </state>
-    <state width="824" height="389" key="XDebugger.FullValuePopup/0.0.3440.1400@0.0.3440.1400" timestamp="1643823348389" />
+    <state width="824" height="389" key="XDebugger.FullValuePopup/0.0.3440.1400@0.0.3440.1400" timestamp="1643828143455" />
+    <state x="1538" y="251" width="672" height="678" key="search.everywhere.popup" timestamp="1643827192202">
+      <screen x="0" y="0" width="3440" height="1400" />
+    </state>
+    <state x="1538" y="251" width="672" height="678" key="search.everywhere.popup/0.0.3440.1400@0.0.3440.1400" timestamp="1643827192202" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/runEvBasedSTL.py</url>
-          <line>460</line>
+          <line>459</line>
           <option name="timeStamp" value="6" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/getAllCommands.py</url>
           <line>259</line>
-          <option name="timeStamp" value="7" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/getAllCommands.py</url>
-          <line>157</line>
-          <option name="timeStamp" value="9" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/getAllCommands.py</url>
-          <line>113</line>
-          <option name="timeStamp" value="11" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/getAllCommands.py</url>
-          <line>146</line>
-          <option name="timeStamp" value="12" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/activateProp.py</url>
-          <line>158</line>
-          <option name="timeStamp" value="15" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/activateProp.py</url>
-          <line>473</line>
-          <option name="timeStamp" value="16" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/activateProp.py</url>
-          <line>430</line>
-          <option name="timeStamp" value="17" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/activateProp.py</url>
-          <line>350</line>
-          <option name="timeStamp" value="20" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/activateProp.py</url>
-          <line>226</line>
-          <option name="timeStamp" value="22" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/activateProp.py</url>
-          <line>255</line>
-          <option name="timeStamp" value="24" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/activateProp.py</url>
-          <line>310</line>
-          <option name="timeStamp" value="26" />
+          <option name="timeStamp" value="48" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
+    <watches-manager>
+      <configuration name="PythonConfigurationType">
+        <watch expression="props" />
+      </configuration>
+    </watches-manager>
   </component>
 </project>

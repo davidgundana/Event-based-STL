@@ -93,9 +93,9 @@ def evBarrier(State, phi, t, Ts, a, b, inputTime, pos, posRef, posStart, hz):
         else:
             tempFunc = re.sub('pos\[', 'posStart[', funcOf)
             if numPos == 1:
-                initDist = abs(eval(tempFunc) - p)
+                initDist = abs(eval(tempFunc) - p) + 10
             else:
-                initDist = eval(tempFunc)
+                initDist = eval(tempFunc) + 10
             bInit = signF * (initDist - p)
             aInit = (signF * p - signF * bInit) / b
             # gamInit = (t - (1 / hz) - a) * aInit + bInit

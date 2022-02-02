@@ -385,6 +385,7 @@ class activateProp:
                     else:
                         orderToComplete = np.argpartition(times,np.size(times)-1)
 
+                    time2FinishPrev = 0
                     for j in range(np.size(orderToComplete)):
                         if j == 0:
                             distFromSafe = self.getDistance(phiRobot[orderToComplete[j]], pos, posRef)
@@ -399,9 +400,10 @@ class activateProp:
                                 if isinstance(phiRobot[0].inputTime, int):
                                     timeRemaining = (phiRobot[0].interval[1] + phiRobot[0].inputTime) - t
                                 else:
-                                    timeRemaining = phiRobot[0].interval[1] -t
+                                    timeRemaining = phiRobot[0].interval[1] - t
 
                             timeBuffer = timeRemaining - time2Finish
+                            time2FinishPrev += time2Finish
                             robustness.append(self.weights[1] * timeBuffer)
                         else:
                             posTemp = copy.deepcopy(pos)
@@ -419,7 +421,9 @@ class activateProp:
                                 timeRemaining = phiRobot[0].interval[1]
                             else:
                                 timeRemaining = (phiRobot[j].interval[1] + phiRobot[j].inputTime) - t
-                            timeBuffer = timeRemaining - time2Finish
+                            timeBuffer = timeRemaining - (time2Finish + time2FinishPrev)
+                            time2FinishPrev += time2Finish
+
                             robustness.append(self.weights[1] * timeBuffer)
             # robustness.sort()
             allRobust.append(robustness)
@@ -470,6 +474,7 @@ class activateProp:
 
         trans2Make = allTransMaxCopy[indOfTrans, :]
         self.robustness = allRobustCopy[indOfTrans]
+        self.robustness = allRobust[np.where(np.all(allTransMax == trans2Make,axis=1))[0][0]]
 
         return trans2Make
 
