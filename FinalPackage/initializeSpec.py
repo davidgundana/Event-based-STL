@@ -299,8 +299,11 @@ class specInfo:
                 for j in range(np.size(self.nodes,0)):
                     if i != j:
                         try:
-                            (cost, rute) = matrixDijkstra.dijkstra(nodeGraph, i, j)
-                            rute = np.flip(rute)
+                            if j != 0:
+                                (cost, rute) = matrixDijkstra.dijkstra(nodeGraph, i, j)
+                                rute = np.flip(rute)
+                            else:
+                                (cost, rute) = matrixDijkstra.dijkstra(nodeGraph, j, i)
                         except:
                             print('here')
                     else:
