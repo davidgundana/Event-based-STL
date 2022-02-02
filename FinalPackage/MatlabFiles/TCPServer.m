@@ -148,7 +148,6 @@ for k = 1:k_max
     %send message to python
     fwrite(t,msg,'char')
     disp('DEBUG MESSAGE: ' + message)
-    disp(input)
     %Get keyboard movement for human and change the position of the human
     [cmdPx,cmdPy] = getKeyMovement(animate);
     posPx = posPx + (cmdPx*maxP)*(1/tStep);

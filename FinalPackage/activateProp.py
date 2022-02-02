@@ -155,7 +155,6 @@ class activateProp:
 
         propsLoc = (np.where(trans2Make == 1)[0]).tolist()
         self.props2Activate = [self.controllableProp[element] for element in propsLoc]
-        # print(time.time() - t4)
 
         return self
     def findAcceptingCycle(self):

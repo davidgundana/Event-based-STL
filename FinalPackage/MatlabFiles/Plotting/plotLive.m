@@ -32,8 +32,8 @@ end
 
 
 %axis equal
-ax.XLim = [-1,21];
-ax.YLim = [-1,21];
+ax.XLim = [-2,42];
+ax.YLim = [-2,32];
 %xlabel('x-pos')
 %ylabel('y-pos')
 

@@ -108,7 +108,7 @@ class getAllCommands:
             if len(activate.robustness) > 0:
                 if any(x < 0 for x in activate.robustness):
                     badConditions.append(self.conditions[i])
-
+            print(activate.robustness)
         # the badConditions variable shows which combinations of inputs result in a negative robustness score
         # for a proposition
         currInput = self.State.input[::2].astype(int)
@@ -147,7 +147,7 @@ class getAllCommands:
         self.currState = activate.currState
 
         # Toggle to turn on/off pre failure warnings
-        preFailure = 0
+        preFailure = 1
         if preFailure:
             # this is for a pre-failure warning. We want to see what happens if things change with the inputs
             self.findConditions(activate)
@@ -357,7 +357,8 @@ class getAllCommands:
             closestP = p1
             dx = pt[0] - p1[0]
             dy = pt[1] - p1[1]
-            dist = np.sqrt(dx ** 2 + dy ** 2) * np.ones((1,np.size(pt,0)))[0]
+            dist = np.zeros((1,np.size(pt,0)))[0]
+            # dist = np.sqrt(dx ** 2 + dy ** 2) * np.ones((1,np.size(pt,0)))[0]
         else:
             dist = np.zeros((1,np.size(pt,0)))[0]
 

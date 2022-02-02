@@ -9,7 +9,7 @@ import os
 #Find path of pickle file
 tpath = os.getcwd()
 my_dir = os.path.dirname(os.path.abspath(__file__))
-pickle_file_path = os.path.join(my_dir, 'Pickle Files', 'paperSpec4.pkl')
+pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'paperSpec4.pkl')
 
 #Load pickle file
 with open(pickle_file_path, 'rb') as input:

@@ -13,6 +13,6 @@ time = zeros(1,k_max);
 %Max velocity of human (only to simulate human motion)
 maxP = 2;
 
-load('specTest.mat')
+load('paperspec4.mat')
 
 TCPServer(k_max,time,maxP,freq,robots,humans,init_robot,init_human,input,map,inputNames,nodes)
