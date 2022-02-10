@@ -15,6 +15,7 @@ from getAllCommands import getAllCommands
 from prepForCommands import getCMD
 from makeSpecs import getSpecs, negationNormal, findInfo, handleUntil, eventFormulas
 from activateProp import activateProp
+import matplotlib.pyplot as plt
 
 
 class formData:
@@ -29,10 +30,21 @@ class formData:
         my_dir2 = os.path.join(my_dir, 'Specs', '')
         my_dir3 = os.path.join(my_dir, 'Maps', 'paperMap.txt')
         my_dir4 = os.path.join(my_dir, 'Maps', 'paperNodes.txt')
-        my_dir = os.path.join(my_dir, 'Specs', 'paperspec4.txt')
+        my_dir = os.path.join(my_dir, 'Specs', 'paperspec2rob3teams_3event.txt')
 
+        # 2 robots 2 teams
+        # self.default = np.array(
+        #     ['4', '5', '3,3,15,3,3,15,3,3,15,3,3,15', '4,23,0,20,23,0,36,23,0,5,23,0', '-169,76,0'])
+        # 2 robots 3 teams
         self.default = np.array(
-            ['4', '5', '2,2,15,2,2,15,2,2,15,2,2,15', '4,22,0,20,23,0,36,25,0,5,22,0', '-169,76,0'])  # pre-filled values
+            ['6', '5', '3,3,15,3,3,15,3,3,15,3,3,15,3,3,15,3,3,15', '4,23,0,20,23,0,36,23,0,5,23,0,36,5,0,36,16,0', '-169,76,0'])  # pre-filled values
+        # 2 robots 4 teams
+        # self.default = np.array(
+        #     ['8', '5', '3,3,15,3,3,15,3,3,15,3,3,15,3,3,15,3,3,15,3,3,15,3,3,15', '4,23,0,20,23,0,36,23,0,5,23,0,36,5,0,36,16,0,10,25,0,30,28,0', '-169,76,0'])  # pre-filled values
+
+
+        # self.default = np.array(
+        #     ['4', '5', '3,3,15,3,3,15,3,3,15,3,3,15', '4,22,0,20,23,0,36,25,0,5,22,0', '-169,76,0'])  # pre-filled values
         self.filename1 = my_dir  # Directory of Specification
         self.filename2 = my_dir2
         self.filename3 = my_dir3
@@ -167,7 +179,13 @@ class formData:
             import spot
             print(spotSTL)
             # Generate Buchi automaton and save
-            auto = spot.formula(spotSTL).translate('BA').to_str('spin')
+            buch = spot.translate(spotSTL, 'BA', 'deterministic', 'complete', 'sbacc')
+            accepting = self.find_accepting_states(buch.to_str('dot'))
+            print('Number of states: ' + str(buch.num_states()))
+            print('Number of edges: ' + str(buch.num_edges()))
+
+            auto = buch.to_str('HOA')
+            # spot.translate(spotSTL, 'sbacc','Small').to_str('spin')
             auto = auto.splitlines()
             auto = auto[1:]
 
@@ -191,7 +209,7 @@ class formData:
                 self.ready = 0
         if self.ready:
             # Edit the specification to be used by python and create object for propositions
-            specattr = initializeSpec.spec(self.spec)
+            specattr = initializeSpec.spec(self.spec,accepting)
 
             # determine set of uncontrollable propositions and controllable propositions from specification
             controllableProp = [re.findall('pred', elem) for elem in specattr.propositions]
@@ -217,7 +235,7 @@ class formData:
                     self.nodeConnections = pickle.load(input)
 
             #Create State
-            self.State = initializeSpec.specInfo(specattr.spec, specattr.props, specattr.propositions, phi,
+            self.State = initializeSpec.specInfo(specattr, specattr.spec, specattr.props, specattr.propositions, phi,
                         self.controllableProp, self.M, text1, master,self.map,self.nodes,
                                                  self.nodeGraph, self.nodeConnections)
             # Evaluating each transition formula at runtime can be expensive. this function simplifies the formulas.
@@ -341,6 +359,47 @@ class formData:
         tk.Button(master, text='Apply', highlightbackground='green',
                   command=(lambda e=results: self.userData(e))).grid(row=14, column=1, sticky=tk.W, pady=6)
 
+    def create_buchi(self, mission_spec, remove=True):
+        # create buchi
+        import spot
+        import networkx as nx
+        f = spot.translate(mission_spec, 'BA', 'deterministic', 'complete','sbacc')
+        file = open('formula.dot', "w")
+        file.write(f.to_str('dot'))
+        file.close()
+        # convert buchi to nx
+        f_nx = (nx.drawing.nx_pydot.read_dot('formula.dot'))
+
+        # label accepting states
+        accepting_states = self.find_accepting_states(f.to_str('dot'))
+        accepting_labels = {k: 'F' for k in accepting_states}
+        nx.set_node_attributes(f_nx, accepting_labels, 'accepting')
+
+        # find initial state
+        init_buchi = list(f_nx.successors('I'))[0]
+
+        f_temp = f_nx.copy()
+        # init_buchi = list(f_temp.successors('I'))[0]        # buchi should only have one init state
+        # print(accepting_states, init_buchi)
+        if remove:
+            f_temp.remove_node('I')
+
+        return f_temp, accepting_states, init_buchi
+
+    def find_accepting_states(self,dot_str):
+        '''
+        to be an accepting state: 'peripheries=2' and there exists transition state -> state
+        '''
+        states = []
+        for line in dot_str.split('\n'):
+            if line.find('peripheries=2') != -1:
+                s = line.split()[0]
+                check_transition = s + ' -> ' + s
+                # if check_transition in dot_str:
+                states.append(s)
+        return states
+
+
 class cmdInp:
     def __init__(self):
         self.posX = []
@@ -429,7 +488,7 @@ if __name__ == "__main__":
             savemat(filePathM, dict)
     elif loadOnStart == 1:
         my_dir = os.path.dirname(os.path.abspath(__file__))
-        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'paperspec4.pkl')
+        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'paperspec2rob3teams_3event.pkl')
         with open(pickle_file_path, 'rb') as input:
             f = pickle.load(input)
         #Get the inputs for the function to get robot commands. Inputs can be from gui or from a copied message
@@ -438,23 +497,125 @@ if __name__ == "__main__":
 
     runOnce = 1
     if runOnce and f.ready:
+        debug = 0
         # Time how long it takes to get a command.
-        t = time.time()
-        I.input[0] = 1
-        I.currTime = .1
-        I.input[2] = 1
-        # I.input[8] = 1
-        # I.input[10] = 1
-        # I.currState = 1
-        # I.currTime = I.currTime+1/float(f.freq)
-        # vx, vy, vtheta, I.currState, distTotal, newinput, I.until = getCMD(f,[0.1069313], [65.41315], [0.3481325], [0.02], [54.13], [0.], [0.12], [67.55], [191.6], 35.54, 0.0, 2, np.array([ 1.,   26.72,  0.,    0. ]), 1)
+        if debug:
+            t = time.time()
+            vx, vy, vtheta, I.currState, distTotal, newinput, I.until = getCMD(f,I.posX,I.posY,I.posTheta,I.posXinit,I.posYinit,
+                I.posThetainit,I.posXPerson,I.posYPerson,I.posThetaPerson,I.currTime,I.startTime,I.currState, I.input,I.until)
+            elapsedT = time.time() - t
 
-        vx, vy, vtheta, I.currState, distTotal, newinput, I.until = getCMD(f,I.posX,I.posY,I.posTheta,I.posXinit,I.posYinit,
-            I.posThetainit,I.posXPerson,I.posYPerson,I.posThetaPerson,I.currTime,I.startTime,I.currState, I.input,I.until)
-        elapsedT = time.time() - t
+            I.input = newinput
+            print(elapsedT)
 
-        I.input = newinput
-        print(elapsedT)
+            print(vx,vy)
+            time.sleep(.1)
+        else:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            walls = f.map
 
-        print(vx,vy,vtheta,newinput)
-        time.sleep(.1)
+            xwall = []
+            ywall = []
+            for i in range(np.size(f.map,0)):
+                xwall.append(f.map[i,0])
+                xwall.append(f.map[i, 2])
+                xwall.append(None)
+                ywall.append(f.map[i,1])
+                ywall.append(f.map[i, 3])
+                ywall.append(None)
+
+            plt.ion()
+            plt.show()
+            ax.plot(xwall, ywall, color="black")
+            plt.draw()
+            plt.pause(0.001)
+            robots = {}
+            colors = ["red", "blue", "green","black"]
+            for i in range(f.M):
+                robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[int(np.floor(i/2))])
+            plt.draw()
+            plt.pause(0.001)
+
+
+
+
+        posX = []
+        posY = []
+        posTheta = []
+        for i in range(int(f.M)):
+            posX = np.append(posX, float(f.initPos[3 * i]))
+            posY = np.append(posY, float(f.initPos[3 * i + 1]))
+            posTheta = np.append(posTheta, float(f.initPos[3 * i + 2]))
+
+        realTime = 0
+        hz = .1
+        if realTime:
+            startTime = time.time()
+            runTime = time.time()-startTime
+        else:
+            runTime = 0
+
+        currState = 0
+        input = I.input
+        allTimes = []
+        while runTime < 30:
+            loopStart = time.time()
+            if runTime > 5:
+                input[0] = 1
+                input[1] = 5
+            if runTime > 6:
+                input[0] = 0
+                input[1] = 0
+            if runTime > 3:
+                input[2] = 1
+                input[3] = 3
+            if runTime > 4:
+                input[2] = 0
+                input[3] = 0
+            if np.size(input,0) >= 6:
+                if runTime > 20:
+                    input[4] = 1
+                    input[5] = 20
+                if runTime > 21:
+                    input[4] = 0
+
+            vx, vy, vtheta, currState, distTotal, newInput, I.until = getCMD(f, posX, posY, posTheta,
+                                                                               I.posXinit, I.posYinit,
+                                                                               I.posThetainit, I.posXPerson,
+                                                                               I.posYPerson, I.posThetaPerson,
+                                                                               runTime, 0, currState,
+                                                                               input, I.until)
+            print(vx[0],vy[0])
+            loopTime = time.time()-loopStart
+            input = newInput
+            allTimes.append(loopTime)
+
+            for i in range(f.M):
+                rob = robots[str(i)].pop(0)
+                rob.remove()
+
+            #update positions
+            if not realTime:
+                loopTime = hz
+            for i in range(int(f.M)):
+                posX[i] = posX[i] + vx[0][i] * loopTime
+                posY[i] = posY[i] + vy[0][i] * loopTime
+                posTheta[i] = posTheta[i] + vtheta[0][i] * loopTime
+                robots[str(i)] = ax.plot(posX[i],posY[i], marker='o', markersize=3, color=colors[int(np.floor(i/2))])
+
+            if realTime:
+                runTime = time.time()-startTime
+            else:
+                runTime += hz
+            plt.title("Time: " + str(round(runTime,2)) + "s")
+            plt.draw()
+            plt.pause(0.001)
+
+        avgT = np.average(allTimes)
+        maxT = np.max(allTimes)
+        print("Average Computation time: " + str(avgT) + "s")
+        print("Max Computation time: " + str(maxT) + "s")
+
+        for i in range(np.size(f.map,0)):  # looping statement;declare the total number of frames
+            plt.pause(0.1)

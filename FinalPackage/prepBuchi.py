@@ -33,6 +33,7 @@ class prep:
 
         # Transform complex conditions for a transition to a set of  values (0,1,2). This will help with
         # evaluating at runtime
+        totalTransitions = 0
         for i in range(np.size(self.State)):
             condCNF = []
             for q in range(np.size(self.State[i].cond)):
@@ -57,14 +58,16 @@ class prep:
                             CNFrep.append(0)
 
                     refNum = []
+                    refProp = []
                     for l in range(np.size(self.propositions)):
                         propo = self.propositions[l]
-                        propo = '\(props.' + propo + '\)'
+                        propo = '\(props.' + propo+ '\)'
                         locOfOption = [re.findall(propo, element) for element in thisOption]
                         locOfOptionTemp = locOfOption
-                        for elem in locOfOptionTemp:
-                            if elem:
+                        for ll in range(np.size(locOfOptionTemp)):
+                            if locOfOptionTemp[ll] != []:
                                 refNum.append(l)
+                                refProp.append(ll)
                                 break
 
                     finalPropVals = [np.inf] * np.size(self.propositions)
@@ -72,7 +75,7 @@ class prep:
                         finalPropVals[l] = 2
 
                     for l in range(np.size(refNum)):
-                        finalPropVals[refNum[l]] = CNFrep[l]
+                        finalPropVals[refNum[l]] = CNFrep[refProp[l]]
 
                     temporaryR = np.asarray([finalPropVals])
                     locOfAll = [i for i, x in enumerate(finalPropVals) if x == 2]
@@ -94,6 +97,7 @@ class prep:
                     allRCond = allRCond[1:]
 
                 allRCond = np.unique(allRCond,axis = 0)
+                totalTransitions += np.size(allRCond,0)
                 allRCond = allRCond.tolist()
 
                 self.State[i].condCNF[j] = allRCond
@@ -108,7 +112,7 @@ class prep:
             message = '\nPreparing Buchi. ' + complete_status
             runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData,text1,master,message)
 
-
+        print('Total Transitions: ' + str(totalTransitions))
         percentage = 100
         text1.configure(state='normal')
         text1.delete("end-1l", "end")

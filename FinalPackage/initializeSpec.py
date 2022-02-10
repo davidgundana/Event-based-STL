@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import re
 import runEvBasedSTL
@@ -8,9 +10,9 @@ import os
 from itertools import islice
 
 class spec:
-    def __init__(self,spec):
+    def __init__(self,spec,accepting):
         self.spec = spec # specification
-        self.accepting_states = [] # pre-allocate accepting states
+        self.accepting_states = accepting # pre-allocate accepting states
         self.controllableProp = [] # pre-allocate controllable propositions
         self.props = [] # value of propositions
         self.initSpec()
@@ -19,7 +21,18 @@ class spec:
     def initSpec(self):
         # Replace the exclamation points with readable values for python and create an object with the
         # values of all propositions
-        self.spec = [re.sub("!", "not ", elem) for elem in self.spec]
+        bodyLoc = [re.findall('(BODY)', elem) for elem in self.spec]
+        idxBody = [i for i, x in enumerate(bodyLoc) if len(x) > 0][0]
+
+        AP = [re.findall('(AP\: )', elem) for elem in self.spec]
+        idxAP = [i for i, x in enumerate(AP) if len(x) > 0]
+        allAP = self.spec[idxAP[0]]
+
+        specRef = copy.deepcopy(self.spec)
+        # for i in range(idxBody+1,np.size(self.spec)):
+        #     for j in range(np.size(propositions),0,-1):
+        #         self.spec[i] = re.sub(str(j),propositions[j],self.spec[i])
+        # self.spec = [re.sub("!", "not ", elem) for elem in self.spec]
 
         propo = [re.findall('(?<=\.)\w*', elem) for elem in self.spec]
         flat_propo = [item for sublist in propo for item in sublist]
@@ -45,10 +58,10 @@ class StatesOfI:
         self.condCNF = [] # Simplified conditions
 
 class specInfo:
-    def __init__(self,spec,props,propositions,phi,controllableProp,M,text1,master,map,nodes,nodeGraph,nodeConnections):
+    def __init__(self,specattr,spec,props,propositions,phi,controllableProp,M,text1,master,map,nodes,nodeGraph,nodeConnections):
         self.graph = [] # Transition graph
         self.State = [] # States in the system
-        self.accepting_states = [] # Set of accepting states
+        self.accepting_states = specattr.accepting_states # Set of accepting states
         self.props = [] # proposition values
         self.controllableProp = controllableProp # Set of controllable propositions
         self.uncontrollableProp = [] # Set of uncontrollable Propositions
@@ -65,106 +78,157 @@ class specInfo:
         self.beginSpec(spec,props,propositions,text1,master)
 
 
-    def beginSpec(self,spec,props,propositions,text1,master):
-        # Find all states
-        states = [re.findall('(\_S+\d+\:)', elem) for elem in spec]
-        if 'all' in ' '.join(spec):
-            # find highest state in spec
-            highestState = re.findall('(\_S+\d+\:)', ' '.join(spec))
-            strHighest = [re.search('[+-]?\d+\.?\d*', s)[0] for s in highestState]
-            intHighest = max(list(map(int, strHighest))) + 1
-            spec = [re.sub('_all', '_S' + str(intHighest), line) for line in spec]
-            states = [re.findall('(\_S+\d+\:)', elem) for elem in spec]
+    def beginSpec(self,spec,props,simpleProp,text1,master):
+        # Find the number of States
+        numStates = int(re.split(' ',spec[0])[-1])
 
-        init = [re.findall('init\:',elem) for elem in spec]
-        idxi = [i for i, x in enumerate(init) if len(x) > 0]
-        idxs = [i for i, x in enumerate(states) if len(x) > 0]
-        idx = idxi + idxs
+        # Find the location of all states
+        states = [re.findall('(State\:)', elem) for elem in spec]
+        idx = [i for i, x in enumerate(states) if len(x) > 0]
+        idx.append(len(states)-1)
+        # # Find the location of the body
+        # bodyLoc = [re.findall('(BODY)', elem) for elem in self.spec]
+        # idxBody = [i for i, x in enumerate(bodyLoc) if len(x) > 0][0]
 
-        labelOfS = [spec[i] for i in idx]
-        State = []
+        # Translate numbers to AP
+        AP = [re.findall('(AP\: )', elem) for elem in spec]
+        idxAP = [i for i, x in enumerate(AP) if len(x) > 0]
+        allAP = spec[idxAP[0]]
+        propositions = re.findall('"([^"]*)"', allAP)
 
-        # Track progress
-        percentages = list(np.linspace(0, 100, np.size(idx)+1))
-        percentages = percentages[1:]
+        # for i in range(np.size(propositions)):
+        # for i in range(idxBody+1,np.size(spec)):
+        #     for j in range(np.size(propositions),0,-1):
+        #         spec[i] = re.sub(str(j),propositions[j],spec[i])
 
         # Go through all States and find the conditions of transitions, the results of the conditions,
         # and the accepting states
-        for i in range(np.size(idx)):
+        State = []
+        for i in range(numStates):
             State.append(StatesOfI())
-            if i + 2 > np.size(idx):
-                condition = spec[idx[i] + 2:-2]
-                if np.size(condition) == 0:
-                    try:
-                        condition = spec[idx[i] + 2:-2][0]
-                    except:
-                        condition = spec[idx[i] + 2:-1][0]
-            else:
-                longRange = range(idx[i] + 2,idx[i + 1] - 2)
-                lengthOfR = longRange.stop - longRange.start
-                if lengthOfR >= 1:
-                    condition = spec[idx[i] + 2:idx[i + 1] - 1]
+            condRef = spec[idx[i]+1:idx[i+1]]
+            for j in range(len(condRef)):
+                condTemp = re.split('] ',condRef[j])
+                condEdit = re.sub('\[','',condTemp[0])
+                if condEdit != 't':
+                    condEditSplit = re.split('(?<=[.&\|])',condEdit)
+                    for k in range(np.size(condEditSplit)):
+                        wholeNum = re.findall('[0-9]+', condEditSplit[k])[0]
+                        condEditSplit[k] = re.sub(wholeNum,'('+propositions[int(wholeNum)]+')',condEditSplit[k])
+                    condFinal = ''.join(condEditSplit)
+                    condSplit2 = re.split('\|',condFinal)
+                    for k in range(np.size(condSplit2)):
+                        condSplit2[k] = '('+condSplit2[k]+')'
+                    condFinal2 = ' | '.join(condSplit2)
+                    condFinal2 = re.sub('&', ' and ',condFinal2)
+                    condFinal2 = re.sub('\|', 'or', condFinal2)
+                    condFinal2 = re.sub('!','not ',condFinal2)
+                    State[i].cond.append(condFinal2)
                 else:
-                    condition = spec[idx[i] + 2]
+                    State[i].cond.append('All')
+                State[i].result.append(int(condTemp[1]))
 
-            if np.size(condition) > 1:
-                splitcond = [re.split('\->+', elem) for elem in condition]
-            else:
-                try:
-                    splitcond = re.split('\->+', condition)
-                except:
-                    splitcond = re.split('\->+', condition[0])
-
-            for j in range(np.size(condition)):
-                if np.size(condition) > 1:
-                    splitcondred = re.split(':+\s', splitcond[j][0], maxsplit=1)
-                    try:
-                        ref = re.search('S+\d*', splitcond[j][1])[0]
-                        ref = ref + ':'
-                    except:
-                        ref = re.search('init', splitcond[j][1])[0]
-                        ref = ref + ':'
-                    splitcondred = re.sub("\&\&", "and", splitcondred[1])
-                    splitcondred = re.sub("\|\|", "or", splitcondred)
-                    State[i].cond.append(splitcondred)
-                    location = [re.findall(ref, elem) for elem in labelOfS]
-
-                    accepting = re.search('accept', splitcond[j][1])
-                    results = [k for k, x in enumerate(location) if len(x) > 0]
-                else:
-                    splitcondred = re.split(':+\s', splitcond[j], maxsplit=1)
-                    try:
-                        ref = re.search('S+\d*', splitcond[1])[0]
-                        ref = ref + ':'
-                    except:
-                        ref = re.search('init', splitcond[1])[0]
-                        ref = ref + ':'
-                    splitcondred = re.sub("\&\&", "and", splitcondred[1])
-                    splitcondred = re.sub("\|\|", "or", splitcondred)
-                    State[i].cond.append(splitcondred)
-                    location = [re.findall(ref, elem) for elem in labelOfS]
-
-                    accepting = re.search('accept', splitcond[1])
-                    results = [k for k, x in enumerate(location) if len(x) > 0]
-
-                State[i].result.append(results[0])
-                if accepting is not None:
-                    self.accepting_states.append(State[i].result[j])
-
-            # Track Progress
-            percentage = round(percentages[i],2)
-            text1.configure(state='normal')
-            text1.delete("end-1l", "end")
-            text1.configure(state='disabled')
-            complete_status = str(percentage) + '% complete'
-            message = '\nPreparing specification. ' + complete_status
-            runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData,text1,master,message)
-
-        # Object for each State
         self.State = State
-        self.accepting_states = np.array(self.accepting_states)
-        # Set of accepting States
-        self.accepting_states = np.unique(self.accepting_states)
+        self.accepting_states = np.array(self.accepting_states,dtype='int')
+        # Find all states
+        # states = [re.findall('(\_S+\d+\:)', elem) for elem in spec]
+        # if 'all' in ' '.join(spec):
+        #     # find highest state in spec
+        #     highestState = re.findall('(\_S+\d+\:)', ' '.join(spec))
+        #     strHighest = [re.search('[+-]?\d+\.?\d*', s)[0] for s in highestState]
+        #     intHighest = max(list(map(int, strHighest))) + 1
+        #     spec = [re.sub('_all', '_S' + str(intHighest), line) for line in spec]
+        #     states = [re.findall('(\_S+\d+\:)', elem) for elem in spec]
+        #
+        # init = [re.findall('init\:',elem) for elem in spec]
+        # idxi = [i for i, x in enumerate(init) if len(x) > 0]
+        # idxs = [i for i, x in enumerate(states) if len(x) > 0]
+        # idx = idxi + idxs
+        #
+        # labelOfS = [spec[i] for i in idx]
+        # State = []
+        #
+        # # Track progress
+        # percentages = list(np.linspace(0, 100, np.size(idx)+1))
+        # percentages = percentages[1:]
+        #
+        # # Go through all States and find the conditions of transitions, the results of the conditions,
+        # # and the accepting states
+        # for i in range(np.size(idx)):
+        #     State.append(StatesOfI())
+        #     if i + 2 > np.size(idx):
+        #         condition = spec[idx[i] + 2:-2]
+        #         if np.size(condition) == 0:
+        #             try:
+        #                 condition = spec[idx[i] + 2:-2][0]
+        #             except:
+        #                 condition = spec[idx[i] + 2:-1][0]
+        #     else:
+        #         longRange = range(idx[i] + 2,idx[i + 1] - 2)
+        #         lengthOfR = longRange.stop - longRange.start
+        #         if lengthOfR >= 1:
+        #             condition = spec[idx[i] + 2:idx[i + 1] - 1]
+        #         else:
+        #             condition = spec[idx[i] + 2]
+        #
+        #     if np.size(condition) > 1:
+        #         splitcond = [re.split('\->+', elem) for elem in condition]
+        #     else:
+        #         try:
+        #             splitcond = re.split('\->+', condition)
+        #         except:
+        #             splitcond = re.split('\->+', condition[0])
+        #
+        #     for j in range(np.size(condition)):
+        #         if np.size(condition) > 1:
+        #             splitcondred = re.split(':+\s', splitcond[j][0], maxsplit=1)
+        #             try:
+        #                 ref = re.search('S+\d*', splitcond[j][1])[0]
+        #                 ref = ref + ':'
+        #             except:
+        #                 ref = re.search('init', splitcond[j][1])[0]
+        #                 ref = ref + ':'
+        #             splitcondred = re.sub("\&\&", "and", splitcondred[1])
+        #             splitcondred = re.sub("\|\|", "or", splitcondred)
+        #             State[i].cond.append(splitcondred)
+        #             location = [re.findall(ref, elem) for elem in labelOfS]
+        #
+        #             accepting = re.search('accept', splitcond[j][1])
+        #             results = [k for k, x in enumerate(location) if len(x) > 0]
+        #         else:
+        #             splitcondred = re.split(':+\s', splitcond[j], maxsplit=1)
+        #             try:
+        #                 ref = re.search('S+\d*', splitcond[1])[0]
+        #                 ref = ref + ':'
+        #             except:
+        #                 ref = re.search('init', splitcond[1])[0]
+        #                 ref = ref + ':'
+        #             splitcondred = re.sub("\&\&", "and", splitcondred[1])
+        #             splitcondred = re.sub("\|\|", "or", splitcondred)
+        #             State[i].cond.append(splitcondred)
+        #             location = [re.findall(ref, elem) for elem in labelOfS]
+        #
+        #             accepting = re.search('accept', splitcond[1])
+        #             results = [k for k, x in enumerate(location) if len(x) > 0]
+        #
+        #         State[i].result.append(results[0])
+        #         if accepting is not None:
+        #             self.accepting_states.append(State[i].result[j])
+        #
+        #     # Track Progress
+        #     percentage = round(percentages[i],2)
+        #     text1.configure(state='normal')
+        #     text1.delete("end-1l", "end")
+        #     text1.configure(state='disabled')
+        #     complete_status = str(percentage) + '% complete'
+        #     message = '\nPreparing specification. ' + complete_status
+        #     runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData,text1,master,message)
+        #
+        # # Object for each State
+        # self.State = State
+        # self.accepting_states = np.array(self.accepting_states)
+        # # Set of accepting States
+        # self.accepting_states = np.unique(self.accepting_states)
 
 
         # find intial value of proposiion and set that
@@ -172,7 +236,7 @@ class specInfo:
             initVal = re.split('&&',State[0].cond[0])
             for i in range(np.size(initVal)):
                 bool = re.search('not', initVal[i])
-                propName = propositions[i]
+                propName = simpleProp[i]
                 if bool is not None:
                     exec('props.' + propName + ' = 0')
                 else:
@@ -183,7 +247,7 @@ class specInfo:
         graph = np.zeros((np.size(State),np.size(State)))
         for i in range(np.size(State)):
             for j in range(np.size(State[i].result)):
-                graph[i, State[i].result[j]] = 1
+                graph[i, int(State[i].result[j])] = 1
 
         self.graph = graph
 
@@ -210,8 +274,11 @@ class specInfo:
             tempRoute = []
             for j in range(np.size(self.acceptingWithCycle,0)):
                 goTo = self.acceptingWithCycle[j]
-                allPaths = self.findNRoutes(i,goTo)
-                tempRoute.append(allPaths)
+                try:
+                    allPaths = self.findNRoutes(i,goTo)
+                    tempRoute.append(allPaths)
+                except:
+                    pass
             nRoutes[i] = tempRoute
 
             percentage = round(percentages[i], 2)
@@ -235,12 +302,12 @@ class specInfo:
                 self.controllablePropOrder.append(j)
 
         # Create a set of the parameters in the order that they appear
-        controllablePropOrder = np.unique(self.controllablePropOrder)
-        for i in range(np.size(controllablePropOrder)):
-            self.parameters.append(self.phi[controllablePropOrder[i]].params)
+        # controllablePropOrder = np.unique(self.controllablePropOrder)
+        for i in range(np.size(self.controllablePropOrder)):
+            self.parameters.append(self.phi[self.controllablePropOrder[i]].params)
 
         controllableProp = np.array(self.controllableProp)
-        self.uncontrollableProp = np.setdiff1d(propositions, controllableProp).tolist()
+        self.uncontrollableProp = np.setdiff1d(simpleProp, controllableProp).tolist()
 
 
 

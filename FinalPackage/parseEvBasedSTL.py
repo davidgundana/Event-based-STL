@@ -26,6 +26,7 @@ class Parsed:
         self.dir = [] #Direction used for nominal controller
         self.phiUntil = absPred[4]
         self.until = 0
+        self.robustness = None
         self.STLParse(absPred, id)
 
     def STLParse(self, absPred, id):

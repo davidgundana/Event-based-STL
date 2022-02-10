@@ -66,10 +66,14 @@ try:
                     # IF you cant connect, wait a second and try again
                     print("Connection not established. Waiting for Matlab server...")
                     time.sleep(1)
+
+            t3 = time.time()
             try:
                 msg = s.recv(1024)
             except:
                 nomsg = 1
+            print(time.time()-t3)
+
 
             try:
                 msglen = int(msg[:Headersize])
@@ -78,7 +82,6 @@ try:
                 full_msg = ''
                 msglen = 0
             new_msg = False
-
 
             if len(full_msg) > 350:
                 full_msg = ''
@@ -120,7 +123,7 @@ try:
                                                                             currState, input, unt)
 
                 elapsed = time.time() - t
-                #print(elapsed)
+                print("Computation Time: " + str(elapsed) + " seconds")
                 msg = ""
                 for i in range(f.M):
                     msg = msg + str(vx[0,i]) + " "
@@ -131,7 +134,6 @@ try:
 
                 for i in range(np.size(newinput)):
                     msg = msg + " " + str(newinput[i])
-                print(msg)
                 msglen = len(msg)
                 padL = ' '.ljust(sendSize-msglen-1)
                 msg = f"{msg} {padL}"

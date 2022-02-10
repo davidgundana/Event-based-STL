@@ -98,16 +98,22 @@ class getAllCommands:
         self.conditions = self.conditions.astype(int)
         self.conditions = self.conditions[1:,:]
         self.conditions = np.unique(self.conditions, axis = 0)
+        # for i in range(np.size(simpleInput)):
+        #     if simpleInput[i] == 1:
+        #         indOfMatch = np.where(self.conditions[:,i] == 1)[0]
+        #         self.conditions = np.delete(self.conditions,indOfMatch,axis=0)
 
     def potentialConflicts(self,act,pos,posRef,ub,t,props_, wall_, tempInp_):
         # Lets check things that can be activated for each robot
         # These are the indexes of the inputs for the robot
         badConditions = []
+        robustRef = []
         for i in range(np.size(self.conditions, 0)):
             activate = activateProp.activateProp.activate(act, self.currState, props_, wall_, tempInp_, self.conditions[i], pos, posRef, t,1)
             if len(activate.robustness) > 0:
                 if any(x < 0 for x in activate.robustness):
                     badConditions.append(self.conditions[i])
+                    robustRef.append(activate.robustness)
         # the badConditions variable shows which combinations of inputs result in a negative robustness score
         # for a proposition
         currInput = self.State.input[::2].astype(int)
@@ -127,7 +133,12 @@ class getAllCommands:
                 else:
                     msg += 'are sensed now, the specification may be violated'
 
-                print(msg)
+            indOfNeg = np.where(np.asarray(robustRef[i]) < 0)[0]
+            for j in range(np.size(indOfNeg)):
+                phiId = activate.ids[indOfNeg[j]]
+                timeNeeded = round(-1*robustRef[i][indOfNeg[j]]/activate.weights[1],2)
+                msg += '. To make robustness positive the task ' + self.State.phi[phiId].params + ' needs ' + str(timeNeeded) + ' more seconds to be completed'
+            print(msg)
 
     def Commands(self,currState,pos,posStart,posRef,t,Ts):
         # bounds for commands
@@ -208,7 +219,10 @@ class getAllCommands:
                     for j in range(np.size(phiRobot)):
                         posRob = pos[phiRobot[j].nom[0, :].astype('int')]
                         nomRob = phiRobot[j].nom[1, :]
-                        nomR = self.getNom(self.State, posRob, nomRob, phiRobot[j].p)
+                        if eval(phiRobot[j].params) and phiRobot[j].type == 'ev':
+                            nomR = np.zeros((1,3),dtype=float)[0]
+                        else:
+                            nomR = self.getNom(self.State, posRob, nomRob, phiRobot[j].p)
                         phiRobot[j].nom = phiRobot[j].nom.astype('float')
                         phiRobot[j].nom[1, :] = nomR
                         if np.sum(abs(phiRobot[j].nom[1, :])) != 0:
@@ -238,6 +252,7 @@ class getAllCommands:
                             else:
                                 finalT.append(phiRobot[j].interval[1] + phiRobot[j].inputTime)
                         locOfSoonest = np.argmin(finalT)
+
                         nominals = np.vstack((nominals[0,:],nominals[locOfSoonest+1,:]))
                         #print('multiple nominal controllers. Attempting to satisfy specification by satisfying in order of time bound')
 
@@ -265,7 +280,10 @@ class getAllCommands:
                         nom[0][3 * i - 3] = nomInd[0]
                         nom[0][3 * i - 2] = nomInd[1]
                         nom[0][3 * i - 1] = nomInd[2]
+                    # if nom[0][0] == 0 and t > 5:
+                    #     print('here')
         self.nom = nom
+
 
     def getNom(self,State, pos, nom, p):
         startPos = pos

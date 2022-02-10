@@ -21,14 +21,16 @@ class activateProp:
         self.locOfUncontrollable = [list(self.propositions).index(s) for s in list(self.uncontrollableProp)]
         self.input = []
         self.maxV = maxV
-        self.weights = [.25,.75] #What is already true, what is false right now
+        self.weights = [5,.75] #What is already true, what is false right now
         self.preF = preF
         self.conditions = conditions
+        self.robustRef = []
+        self.time2FinishRef = []
+        self.distFromSafeRef = []
         np.seterr(divide='ignore')
         # self.activate(currState,pos,posRef,t)
 
     def activate(self,currState,props,wall,input,conditions,pos,posRef,t,preF):
-        # t2 = time.time()
         self.input = input
         self.conditions = conditions
         self.preF = preF
@@ -55,7 +57,7 @@ class activateProp:
         else:
             for i in range(len(self.State.phi)):
                 if self.State.phi[i].type == 'alw':
-                    if t not in range(self.State.phi[i].interval[0], self.State.phi[i].interval[1]):
+                    if t < self.State.phi[i].interval[0] or t > self.State.phi[i].interval[1]:
                         propName = self.State.phi[i].prop_label[0]
                         exec('props.' + propName + ' = ' '1')
             evalCond = [eval(s, {'__builtins__': None}, {'props': props}) for s in conditions]
@@ -63,14 +65,11 @@ class activateProp:
 
             result = np.array(self.State.State[currState].result)
             potentialNextStates = result[np.where(evalCond == 1)[0]]
-        # print(time.time()-t2)
-        # t3 = time.time()
         # First find all accepting states that can be reached given uncontrollable propositions
         reachableAcceptCycle = self.findAcceptingCycle()
-        # print(time.time()-t3)
-        # Find all routes from all next states
-        # t4 = time.time()
+
         paths2Consider = []
+
         for i in range(np.size(potentialNextStates)):
             potState = potentialNextStates[i]
             for j in range(np.size(reachableAcceptCycle)):
@@ -137,6 +136,7 @@ class activateProp:
         # first we choose the transition with the most infinities. this is the highest robustness
         numMax = np.count_nonzero(np.isinf(allTransitions), axis=1)
         maxLoc = np.argwhere(numMax == np.amax(numMax)).ravel()
+
         if np.size(maxLoc) == 1:
             # only one maximum robustness
             trans2Make = allTransitions[maxLoc[0]]
@@ -214,6 +214,7 @@ class activateProp:
                 totalDist = distFromSafe + signF*phi.p[0][0]
                 robot = phi.robotsInvolved[0]
                 maxV = np.sqrt(self.maxV[3*robot-3]**2 +  self.maxV[3*robot-2]**2)
+                maxV = self.maxV[3*robot-3]
                 time2Finish = totalDist/maxV
                 timeRemaining = (phi.interval[1] + phi.inputTime) - t
                 timeBuffer = timeRemaining - time2Finish
@@ -283,6 +284,7 @@ class activateProp:
 
             idx = np.argsort(dist2p2)
 
+            closestStartInd = []
             for i in range(np.size(idx)):
                 isect = self.intersectPoint(startPos[0], startPos[1], self.State.nodes[idx[i], 0],
                                                     self.State.nodes[idx[i], 1], map[:, 0], map[:, 1], map[:, 2],
@@ -291,24 +293,38 @@ class activateProp:
                     #Check to see how far the segments are. A buffer may be needed
                     pt1 = startPos
                     pt2 = self.State.nodes[idx[i], 0:2]
-                    if np.all(pt1 != pt2):
+                    if not (pt1==pt2).all():
                         ptOfI1 = map[:, 0:2]
                         ptOfI2 = map[:, 2:4]
                         dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
                         dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-                        if min(dist2closest1) > .5 or min(dist2closest2) > .5:
-                            closestStartInd = idx[i]
-                            closestStart = self.State.nodes[closestStartInd]
-                            break
+                        if min(dist2closest1) > .3 or min(dist2closest2) > .3:
+                            closestStartInd.append(idx[i])
+                            if len(closestStartInd) >= 3:
+                                break
+            if len(closestStartInd) > 1:
+                minDist = []
+                for i in range(np.size(closestStartInd,0)):
+                    closStart = self.State.nodes[closestStartInd[i]]
+                    costToStart = np.sqrt((closStart[0] - startPos[0]) ** 2 + (closStart[1] - startPos[1]) ** 2)
+                    minDist.append(costToStart + self.State.nodeConnections[closestStartInd[i]][closestGoalInd][-1])
+                closestStartInd = closestStartInd[np.argmin(minDist)]
+                closestStart = self.State.nodes[closestStartInd]
+            else:
+                closestStartInd = closestStartInd[0]
+                closestStart = self.State.nodes[closestStartInd]
 
             # If no closest start or goal can be found the point can not be reached given map and nodes
             if 'closestStart' in locals() or 'closestGoal' in locals():
                 # compute total cost
                 # Cost to get to start
-                costToStart = np.sqrt((closestStart[0] - startPos[0]) ** 2 + (closestStart[1] - startPos[1]) ** 2)
-                costToGoal = np.sqrt((goalPoint[0] - closestGoal[0]) ** 2 + (goalPoint[1] - closestGoal[1]) ** 2)
-                pathCost = self.State.nodeConnections[closestStartInd][closestGoalInd][-1]
-                cost = costToStart + costToGoal + pathCost
+                try:
+                    costToStart = np.sqrt((closestStart[0] - startPos[0]) ** 2 + (closestStart[1] - startPos[1]) ** 2)
+                    costToGoal = np.sqrt((goalPoint[0] - closestGoal[0]) ** 2 + (goalPoint[1] - closestGoal[1]) ** 2)
+                    pathCost = self.State.nodeConnections[closestStartInd][closestGoalInd][-1]
+                    cost = costToStart + costToGoal + pathCost
+                except:
+                    print('here')
             else:
                 print('No path to goal given map and nodes')
                 cost = 1000000000
@@ -316,55 +332,79 @@ class activateProp:
         return cost
 
     def pickTransition(self,allTransMax,pos,props,t,wall,posRef):
-        numProp = np.size(np.where(allTransMax[0,:]==1))
         allRobust = []
+        allRobustId = []
+        if np.size(self.robustRef) == 0:
+            robustRef = [None] * np.size(self.State.phi)
+            time2FinishRef = [None] * np.size(self.State.phi)
+            distFromSafeRef = [None] * np.size(self.State.phi)
+        else:
+            robustRef = self.robustRef
+            time2FinishRef = self.time2FinishRef
+            distFromSafeRef = self.distFromSafeRef
+        for i in range(np.size(self.State.phi)):
+            self.State.phi[i].currentTruth = eval('props.' + self.State.phi[i].prop_label, {'__builtins__': None},
+                                 {'props': props})
+            if not self.State.phi[i].currentTruth:
+                self.State.phi[i].distFromSafe = self.getDistance(self.State.phi[i], pos, posRef)
+
         for i in range(np.size(allTransMax,0)):
             indOfActive = np.where(allTransMax[i,:]==1)[0]
             phiIndex = [self.State.controllablePropOrder[s] for s in indOfActive]
             phi = [self.State.phi[s] for s in phiIndex]
             robustness = []
+            ids = []
 
-            satisfiedPhi = [phi[s] for s in range(np.size(phi)) if
-                            eval('props.' + phi[s].prop_label, {'__builtins__': None},
-                                 {'props': props})]
-            unsatisfiedPhi = [phi[s] for s in range(np.size(phi)) if
-                              not eval('props.' + phi[s].prop_label, {'__builtins__': None},
-                                    {'props': props})]
-
+            satisfiedPhi = [phi[s] for s in range(np.size(phi)) if phi[s].currentTruth]
+            unsatisfiedPhi = [phi[s] for s in range(np.size(phi)) if not phi[s].currentTruth]
 
             for j in range(np.size(satisfiedPhi)):
-                distFromSafe = eval(satisfiedPhi[j].funcOf)
-                signF = -satisfiedPhi[j].signFS[0]
-                totalDist = distFromSafe + signF * satisfiedPhi[j].p
-                robustness.append(self.weights[0] * totalDist)
-
+                if robustRef[satisfiedPhi[j].id] is None:
+                    distFromSafe = eval(satisfiedPhi[j].funcOf)
+                    signF = -satisfiedPhi[j].signFS[0]
+                    totalDist = distFromSafe + signF * satisfiedPhi[j].p
+                    robtemp = self.weights[0] * totalDist
+                    robustRef[satisfiedPhi[j].id] = robtemp
+                    robustness.append(robtemp)
+                    ids.append(satisfiedPhi[j].id)
+                else:
+                    robustness.append(robustRef[satisfiedPhi[j].id])
+                    ids.append(satisfiedPhi[j].id)
+            t2 = time.time()
             for ii in range(1,self.M+1):
                 phiRobot = []
-                ids = []
                 for j in range(np.size(unsatisfiedPhi)):
                     if np.where(unsatisfiedPhi[j].robotsInvolved==ii)[0].size != 0:
                         phiRobot.append(unsatisfiedPhi[j])
                         ids.append(unsatisfiedPhi[j].id)
-
                 if len(phiRobot) == 1:
-                    totalDist = self.getDistance(phiRobot[0], pos, posRef)
-                    robot = phiRobot[0].robotsInvolved[0]
-                    maxV = np.sqrt(self.maxV[3 * robot - 3] ** 2 + self.maxV[3 * robot - 2] ** 2)
-                    time2Finish = totalDist / maxV
-                    if self.preF == 1 and not isinstance(phiRobot[0].inputTime, int):
-                        timeRemaining = phiRobot[0].interval[1]
-                    else:
-                        if isinstance(phiRobot[0].inputTime, int):
-                            timeRemaining = (phiRobot[0].interval[1] + phiRobot[0].inputTime) - t
+                    if robustRef[phiRobot[0].id] is None:
+                        totalDist = phiRobot[0].distFromSafe
+                        robot = phiRobot[0].robotsInvolved[0]
+                        maxV = self.maxV[3 * robot - 3]
+                        time2Finish = totalDist / maxV
+                        if self.preF == 1 and not isinstance(phiRobot[0].inputTime, int):
+                            timeRemaining = phiRobot[0].interval[1]
                         else:
-                            timeRemaining = phiRobot[0].interval[1] - t
-                    timeBuffer = timeRemaining - time2Finish
-                    robustness.append(self.weights[1] * timeBuffer)
+                            if isinstance(phiRobot[0].inputTime, float):
+                                timeRemaining = (phiRobot[0].interval[1] + phiRobot[0].inputTime) - t
+                            else:
+                                timeRemaining = phiRobot[0].interval[1] - t
+                        timeBuffer = timeRemaining - time2Finish
+                        robtemp = self.weights[1] * timeBuffer
+                        robustRef[phiRobot[0].id] = robtemp
+                        time2FinishRef[phiRobot[0].id] = time2Finish
+                        distFromSafeRef[phiRobot[0].id] = totalDist
+                        robustness.append(robtemp)
+                        ids.append(phiRobot[0].id)
+                    else:
+                        robustness.append(robustRef[phiRobot[0].id])
+                        ids.append(phiRobot[0].id)
                 elif len(phiRobot) > 1:
                     #Need to do prioritization
                     times = []
                     for j in range(np.size(phiRobot)):
-                        if isinstance(phiRobot[0].inputTime, int):
+                        if isinstance(phiRobot[j].inputTime, float):
                             timeLeft = phiRobot[j].interval[1] + phiRobot[j].inputTime
                         else:
                             timeLeft = phiRobot[j].interval[1] + t
@@ -377,7 +417,7 @@ class activateProp:
                         #Location Priorization
                         dist = []
                         for j in range(np.size(phiRobot)):
-                            distFromSafe = self.getDistance(phiRobot[j], pos, posRef)
+                            distFromSafe = phiRobot[j].distFromSafe
                             signF = phiRobot[j].signFS[0]
                             totalDist = distFromSafe + signF * phiRobot[j].p
                             dist.append(totalDist)
@@ -386,47 +426,61 @@ class activateProp:
                         orderToComplete = np.argpartition(times,np.size(times)-1)
 
                     time2FinishPrev = 0
+
                     for j in range(np.size(orderToComplete)):
                         if j == 0:
-                            distFromSafe = self.getDistance(phiRobot[orderToComplete[j]], pos, posRef)
-                            signF = phiRobot[0].signFS[0]
-                            totalDist = distFromSafe + signF * phiRobot[0].p
-                            robot = phiRobot[0].robotsInvolved[0]
-                            maxV = np.sqrt(self.maxV[3 * robot - 3] ** 2 + self.maxV[3 * robot - 2] ** 2)
-                            time2Finish = totalDist / maxV
-                            if self.preF == 1 and not isinstance(phiRobot[0].inputTime, int):
-                                timeRemaining = phiRobot[0].interval[1]
-                            else:
-                                if isinstance(phiRobot[0].inputTime, int):
-                                    timeRemaining = (phiRobot[0].interval[1] + phiRobot[0].inputTime) - t
+                            if robustRef[phiRobot[orderToComplete[j]].id] is None:
+                                distFromSafe = phiRobot[orderToComplete[j]].distFromSafe
+                                signF = phiRobot[orderToComplete[j]].signFS[0]
+                                totalDist = distFromSafe + signF * phiRobot[orderToComplete[j]].p
+                                robot = phiRobot[orderToComplete[j]].robotsInvolved[0]
+                                maxV = self.maxV[3 * robot - 3]
+                                time2Finish = totalDist / maxV
+                                if self.preF == 1 and not isinstance(phiRobot[orderToComplete[j]].inputTime, int):
+                                    timeRemaining = phiRobot[orderToComplete[j]].interval[1]
                                 else:
-                                    timeRemaining = phiRobot[0].interval[1] - t
+                                    if isinstance(phiRobot[orderToComplete[j]].inputTime, int):
+                                        timeRemaining = (phiRobot[orderToComplete[j]].interval[1] + phiRobot[orderToComplete[j]].inputTime) - t
+                                    else:
+                                        timeRemaining = phiRobot[orderToComplete[j]].interval[1] - t
 
-                            timeBuffer = timeRemaining - time2Finish
-                            time2FinishPrev += time2Finish
-                            robustness.append(self.weights[1] * timeBuffer)
+                                timeBuffer = timeRemaining - time2Finish
+                                time2FinishPrev += time2Finish
+                                robtemp = self.weights[1] * timeBuffer
+                                robustness.append(robtemp)
+                                ids.append(phiRobot[orderToComplete[j]].id)
+                                robustRef[phiRobot[orderToComplete[j]].id] = robtemp
+                                time2FinishRef[phiRobot[orderToComplete[j]].id] = time2FinishPrev
+                                distFromSafeRef[phiRobot[orderToComplete[j]].id] = distFromSafe
+                            else:
+                                ids.append(phiRobot[orderToComplete[j]].id)
+                                robustness.append(robustRef[phiRobot[orderToComplete[j]].id])
+                                time2FinishPrev = time2FinishRef[phiRobot[orderToComplete[j]].id]
+                                distFromSafe = distFromSafeRef[phiRobot[orderToComplete[j]].id]
                         else:
                             posTemp = copy.deepcopy(pos)
-                            if len(phiRobot[j - 1].point) != 0:
-                                posTemp[phiRobot[j].nom[0, 0:2].astype('int')] = phiRobot[j - 1].point
+                            if len(phiRobot[orderToComplete[j-1]].point) != 0:
+                                posTemp[phiRobot[orderToComplete[j]].nom[0, 0:2].astype('int')] = phiRobot[orderToComplete[j-1]].point
                             else:
                                 posTemp = np.array([posTemp[0],posTemp[1]])
                             distFromSafe2 = distFromSafe + self.getDistance(phiRobot[orderToComplete[j]], posTemp, posRef)
-                            signF = phiRobot[j].signFS[0]
+                            signF = phiRobot[orderToComplete[j]].signFS[0]
                             totalDist = distFromSafe2 + signF * phiRobot[j].p
-                            robot = phiRobot[j].robotsInvolved[0]
-                            maxV = np.sqrt(self.maxV[3 * robot - 3] ** 2 + self.maxV[3 * robot - 2] ** 2)
+                            robot = phiRobot[orderToComplete[j]].robotsInvolved[0]
+                            maxV = self.maxV[3 * robot - 3]
                             time2Finish = totalDist / maxV
-                            if self.preF == 1 and not isinstance(phiRobot[j].inputTime, int):
+                            if self.preF == 1 and not isinstance(phiRobot[j].inputTime, float):
                                 timeRemaining = phiRobot[0].interval[1]
                             else:
                                 timeRemaining = (phiRobot[j].interval[1] + phiRobot[j].inputTime) - t
                             timeBuffer = timeRemaining - (time2Finish + time2FinishPrev)
                             time2FinishPrev += time2Finish
-
+                            ids.append(phiRobot[orderToComplete[j]].id)
                             robustness.append(self.weights[1] * timeBuffer)
             # robustness.sort()
+
             allRobust.append(robustness)
+            allRobustId.append(ids)
 
         # allRobust = allRobust[1:,:]
 
@@ -475,7 +529,12 @@ class activateProp:
         trans2Make = allTransMaxCopy[indOfTrans, :]
         self.robustness = allRobustCopy[indOfTrans]
         self.robustness = allRobust[np.where(np.all(allTransMax == trans2Make,axis=1))[0][0]]
-
+        self.ids = allRobustId[np.where(np.all(allTransMax == trans2Make,axis=1))[0][0]]
+        self.robustRef = robustRef
+        self.time2FinishRef = time2FinishRef
+        self.distFromSafeRef = distFromSafeRef
+        # if t > 22:
+        #     print('here')
         return trans2Make
 
     def checkUntil(self,allTransitions):
