@@ -28,20 +28,27 @@ class formData:
         # Default spec location
         my_dir = os.path.dirname(os.path.abspath(__file__))
         my_dir2 = os.path.join(my_dir, 'Specs', '')
-        my_dir3 = os.path.join(my_dir, 'Maps', 'paperMap.txt')
-        my_dir4 = os.path.join(my_dir, 'Maps', 'paperNodes.txt')
-        my_dir = os.path.join(my_dir, 'Specs', 'paperspec2rob3teams_3event.txt')
+        my_dir3 = os.path.join(my_dir, 'Maps', 'RALMapScaled.txt')
+        my_dir4 = os.path.join(my_dir, 'Maps', 'RALNodesScaled.txt')
+        my_dir = os.path.join(my_dir, 'Specs', 'RALTest.txt')
 
-        # 2 robots 2 teams
-        # self.default = np.array(
-        #     ['4', '5', '3,3,15,3,3,15,3,3,15,3,3,15', '4,23,0,20,23,0,36,23,0,5,23,0', '-169,76,0'])
-        # 2 robots 3 teams
+        # 1 robots
         self.default = np.array(
-            ['6', '5', '3,3,15,3,3,15,3,3,15,3,3,15,3,3,15,3,3,15', '4,23,0,20,23,0,36,23,0,5,23,0,36,5,0,36,16,0', '-169,76,0'])  # pre-filled values
-        # 2 robots 4 teams
-        # self.default = np.array(
-        #     ['8', '5', '3,3,15,3,3,15,3,3,15,3,3,15,3,3,15,3,3,15,3,3,15,3,3,15', '4,23,0,20,23,0,36,23,0,5,23,0,36,5,0,36,16,0,10,25,0,30,28,0', '-169,76,0'])  # pre-filled values
+            ['1', '5', '.5, .5 ,15', '1.8,-0.75,15', '-1.8,-1.25,0'])
 
+        # 5 robots
+        # self.default = np.array(
+        #     ['5', '5', '.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15', '1.75,-1.25,15,-.6,1,0,-.6,-.4,0,-.3,-1,0,.3,-1,0', '-1.7,-2,0,1.75,.4,0,-1.5,.5,0'])
+
+        # 7 robots
+        # self.default = np.array(
+        #     ['7', '5', '.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15',
+        #      '1.75,-1.25,15,-.6,1,0,-.6,-.4,0,-.3,-1,0,.3,-1,0, 1.5, -.5,0,1.8,-.5,0', '-1.7,-2,0,1.75,.4,0,-1.5,.5,0'])
+
+        # 9 robots
+        # self.default = np.array(
+        #     ['9', '5', '.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15',
+        #      '1.75,-1.25,15,-.6,1,0,-.6,-.4,0,-.3,-1,0,.3,-1,0, 1.5, -.5,0,1.8,-.5,0,-1.5,-1,0,-1,-1,0', '-1.7,-2,0,1.75,.4,0,-1.5,.5,0'])
 
         # self.default = np.array(
         #     ['4', '5', '3,3,15,3,3,15,3,3,15,3,3,15', '4,22,0,20,23,0,36,25,0,5,22,0', '-169,76,0'])  # pre-filled values
@@ -465,7 +472,7 @@ class cmdInp:
 
 
 if __name__ == "__main__":
-    loadOnStart = 1
+    loadOnStart = 0
     if loadOnStart == 0:
         f = formData()
         f.makeForm()
@@ -488,7 +495,7 @@ if __name__ == "__main__":
             savemat(filePathM, dict)
     elif loadOnStart == 1:
         my_dir = os.path.dirname(os.path.abspath(__file__))
-        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'paperspec2rob3teams_3event.pkl')
+        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'RALTest.pkl')
         with open(pickle_file_path, 'rb') as input:
             f = pickle.load(input)
         #Get the inputs for the function to get robot commands. Inputs can be from gui or from a copied message
@@ -525,29 +532,51 @@ if __name__ == "__main__":
                 ywall.append(f.map[i, 3])
                 ywall.append(None)
 
+
+
             plt.ion()
             plt.show()
             ax.plot(xwall, ywall, color="black")
+            dispRoadmap = 0
+            if dispRoadmap:
+                xNodes = []
+                yNodes = []
+                for i in range(np.size(f.State.nodeGraph, 0)):
+                    for j in range(np.size(f.State.nodeGraph, 1)):
+                        if f.State.nodeGraph[i, j] > 0:
+                            xLine = [f.State.nodes[i, 0], f.State.nodes[j, 0]]
+                            yLine = [f.State.nodes[i, 1], f.State.nodes[j, 1]]
+                            ax.plot(xLine, yLine, color="red")
             plt.draw()
             plt.pause(0.001)
             robots = {}
             colors = ["red", "blue", "green","black"]
             for i in range(f.M):
-                robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[int(np.floor(i/2))])
+                robots[str(i)] = ax.plot(f.initPos[3 * i], f.initPos[3 * i + 1], marker='o', markersize=3,
+                                         color=colors[0])
+                # numR = np.floor(f.M/2)
+                # if i < int(numR-1):
+                #     robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[0])
+                # else:
+                #     robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[int(np.floor((i+1)/numR))])
+
             plt.draw()
             plt.pause(0.001)
-
-
-
 
         posX = []
         posY = []
         posTheta = []
+        posPX = []
+        posPY = []
+        posPTheta = []
         for i in range(int(f.M)):
             posX = np.append(posX, float(f.initPos[3 * i]))
             posY = np.append(posY, float(f.initPos[3 * i + 1]))
             posTheta = np.append(posTheta, float(f.initPos[3 * i + 2]))
-
+        for i in range(int(f.P)):
+            posPX = np.append(posPX, float(f.initPosRef[3 * i]))
+            posPY = np.append(posPY, float(f.initPosRef[3 * i + 1]))
+            posPTheta = np.append(posPTheta, float(f.initPosRef[3 * i + 2]))
         realTime = 0
         hz = .1
         if realTime:
@@ -561,29 +590,30 @@ if __name__ == "__main__":
         allTimes = []
         while runTime < 30:
             loopStart = time.time()
-            if runTime > 5:
+            if runTime > 0:
                 input[0] = 1
-                input[1] = 5
-            if runTime > 6:
+                input[1] = 0
+            if runTime > 3:
                 input[0] = 0
                 input[1] = 0
             if runTime > 3:
                 input[2] = 1
                 input[3] = 3
-            if runTime > 4:
+            if runTime > 5:
                 input[2] = 0
                 input[3] = 0
-            if np.size(input,0) >= 6:
-                if runTime > 20:
+            if f.N > 2:
+                if runTime > 9:
                     input[4] = 1
-                    input[5] = 20
-                if runTime > 21:
+                    input[5] = 9
+                if runTime > 10:
                     input[4] = 0
+                    input[5] = 0
 
             vx, vy, vtheta, currState, distTotal, newInput, I.until = getCMD(f, posX, posY, posTheta,
                                                                                I.posXinit, I.posYinit,
-                                                                               I.posThetainit, I.posXPerson,
-                                                                               I.posYPerson, I.posThetaPerson,
+                                                                               I.posThetainit, posPX,
+                                                                               posPY, posPTheta,
                                                                                runTime, 0, currState,
                                                                                input, I.until)
             print(vx[0],vy[0])
@@ -602,7 +632,17 @@ if __name__ == "__main__":
                 posX[i] = posX[i] + vx[0][i] * loopTime
                 posY[i] = posY[i] + vy[0][i] * loopTime
                 posTheta[i] = posTheta[i] + vtheta[0][i] * loopTime
-                robots[str(i)] = ax.plot(posX[i],posY[i], marker='o', markersize=3, color=colors[int(np.floor(i/2))])
+                if i == 0:
+                    robots[str(i)] = ax.plot(posX[i],posY[i], marker='o', markersize=3, color=colors[0])
+                else:
+                    robots[str(i)] = ax.plot(posX[i],posY[i], marker='o', markersize=3, color=colors[int(np.floor((i+1)/numR))])
+
+
+            # Hard Code pos of human and spills for experiment
+            posPX[0] = posX[0]
+            posPY[0] = posY[0]
+            posPTheta[0] = posTheta[0]
+                # robots[str(i)] = ax.plot(posX[i],posY[i], marker='o', markersize=3, color=colors[int(np.floor(i/2))])
 
             if realTime:
                 runTime = time.time()-startTime

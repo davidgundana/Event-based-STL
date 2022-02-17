@@ -45,13 +45,13 @@ class activateProp:
                 propName = self.uncontrollableProp[i]
                 exec('props.' + propName + ' = ' + str(self.conditions[i]))
 
-
         #find the transition that is being made based on the conditions
         conditions = self.State.State[currState].cond
         evalCond = eval(','.join(conditions), {'__builtins__': None}, {'props': props})
         evalCond = np.multiply(evalCond,1)
 
         result = np.array(self.State.State[currState].result)
+
         if np.sum(evalCond) != 0:
             potentialNextStates = result[np.where(evalCond == 1)[0]]
         else:
@@ -81,7 +81,6 @@ class activateProp:
 
 
         paths2Consider = [item for sublist in paths2Consider for item in sublist]
-
         # We only care about the first transition for now
         row2Del = []
         for s in range(np.size(paths2Consider, 0)):
@@ -162,27 +161,26 @@ class activateProp:
         for j in range(np.size(self.State.acceptingWithCycle)):
             transToAccept = self.State.acceptingWithCycle[j]
             comeFrom = np.where(self.graph[:,transToAccept] == 1)[0]
-            allConds = np.zeros((1,np.size(self.State.State[0].condCNF[0][0])),dtype = int)
+            # allConds = np.zeros((1,np.size(self.State.State[0].condCNF[0][0])),dtype = int)
             for k in range(np.size(comeFrom)):
                 stateFrom = comeFrom[k]
                 idOfResult = np.where(self.State.State[stateFrom].result == transToAccept)[0][0]
                 condOfI = np.asarray(self.State.State[stateFrom].condCNF[idOfResult])
-                # condOfI2 = np.zeros((1, np.size(condOfI[0])),dtype = int)
-                #
-                # for ll in range(np.size(condOfI,0)):
-                #     tempStr = condOfI[ll,:]
-                #     condOfI2 = np.append(condOfI2, [tempStr], axis=0)
-                # condOfI2 = condOfI2[1:,:]
-                #
-                # allConds = np.append(allConds,condOfI2, axis = 0)
-                allConds = np.append(allConds,condOfI, axis = 0)
+                # allConds = np.append(allConds,condOfI, axis = 0)
 
+                # New stuff
+                condOfI2 = condOfI[:,self.locOfUncontrollable]
+                condOfI2 = np.unique(condOfI2, axis=0)
+                acceptable = np.where((condOfI2 == self.input).all(axis=1))[0]
+                if np.size(acceptable != 0):
+                    reachableAccepting.append(transToAccept)
+                    break
 
-            allConds = allConds[:,self.locOfUncontrollable]
-            allConds = np.unique(allConds, axis = 0)
-            acceptable = np.where((allConds == self.input).all(axis=1))[0]
-            if np.size(acceptable != 0):
-                reachableAccepting.append(transToAccept)
+            # allConds = allConds[:,self.locOfUncontrollable]
+            # allConds = np.unique(allConds, axis = 0)
+            # acceptable = np.where((allConds == self.input).all(axis=1))[0]
+            # if np.size(acceptable != 0):
+            #     reachableAccepting.append(transToAccept)
 
         return reachableAccepting
 
@@ -225,7 +223,7 @@ class activateProp:
     def getDistance(self,phi,pos,posRef):
         startPos = pos[3*(phi.robotsInvolved[0]-1):3 * (phi.robotsInvolved[0] - 1) + 2]
         goalPoint = copy.deepcopy(startPos)
-        if np.size(phi.point) == 0:
+        if not isinstance(phi.point[0],float):
             numPos = np.size(re.findall('pos', phi.funcOf))
             if numPos == 1:
                 indSame = int(re.search('(?<=\[)\d+(?=\])', phi.funcOf)[0])
@@ -241,9 +239,8 @@ class activateProp:
                 directionSplit[0, 0] = '(' + directionSplit[0, 0]
                 directionSplit[0, 1] = re.split('[\+,\-]', dir[1])[1]
                 directionSplit[0, 1] = '(' + directionSplit[0, 1]
-
                 vals = [-eval(elem, {'__builtins__': None}, {'pos': pos, 'np': np, 'posRef': posRef}) for elem in dir]
-                goalPoint = pos[0:2] + vals
+                goalPoint = pos[phi.nom[0,0:2].astype('int')] + vals
         else:
             goalPoint = phi.point
 
@@ -298,16 +295,19 @@ class activateProp:
                         ptOfI2 = map[:, 2:4]
                         dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
                         dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-                        if min(dist2closest1) > .3 or min(dist2closest2) > .3:
+                        if min(dist2closest1) > .03 or min(dist2closest2) > .03:
                             closestStartInd.append(idx[i])
-                            if len(closestStartInd) >= 3:
+                            if len(closestStartInd) >= 8:
                                 break
             if len(closestStartInd) > 1:
                 minDist = []
                 for i in range(np.size(closestStartInd,0)):
                     closStart = self.State.nodes[closestStartInd[i]]
                     costToStart = np.sqrt((closStart[0] - startPos[0]) ** 2 + (closStart[1] - startPos[1]) ** 2)
-                    minDist.append(costToStart + self.State.nodeConnections[closestStartInd[i]][closestGoalInd][-1])
+                    try:
+                        minDist.append(costToStart + self.State.nodeConnections[closestStartInd[i]][closestGoalInd][-1])
+                    except:
+                        print('here')
                 closestStartInd = closestStartInd[np.argmin(minDist)]
                 closestStart = self.State.nodes[closestStartInd]
             else:
@@ -370,7 +370,6 @@ class activateProp:
                 else:
                     robustness.append(robustRef[satisfiedPhi[j].id])
                     ids.append(satisfiedPhi[j].id)
-            t2 = time.time()
             for ii in range(1,self.M+1):
                 phiRobot = []
                 for j in range(np.size(unsatisfiedPhi)):
@@ -460,9 +459,16 @@ class activateProp:
                         else:
                             posTemp = copy.deepcopy(pos)
                             if len(phiRobot[orderToComplete[j-1]].point) != 0:
-                                posTemp[phiRobot[orderToComplete[j]].nom[0, 0:2].astype('int')] = phiRobot[orderToComplete[j-1]].point
+                                try:
+                                    posTemp[phiRobot[orderToComplete[j]].nom[0, 0:2].astype('int')] = phiRobot[orderToComplete[j-1]].point
+                                except:
+                                    for jj in range(np.size(phiRobot[orderToComplete[j-1]].point)):
+                                        phiRobot[orderToComplete[j - 1]].point[jj] = eval(phiRobot[orderToComplete[j-1]].point[jj])
+                                    posTemp[phiRobot[orderToComplete[j]].nom[0, 0:2].astype('int')] = phiRobot[
+                                        orderToComplete[j - 1]].point
                             else:
                                 posTemp = np.array([posTemp[0],posTemp[1]])
+
                             distFromSafe2 = distFromSafe + self.getDistance(phiRobot[orderToComplete[j]], posTemp, posRef)
                             signF = phiRobot[orderToComplete[j]].signFS[0]
                             totalDist = distFromSafe2 + signF * phiRobot[j].p
@@ -478,7 +484,6 @@ class activateProp:
                             ids.append(phiRobot[orderToComplete[j]].id)
                             robustness.append(self.weights[1] * timeBuffer)
             # robustness.sort()
-
             allRobust.append(robustness)
             allRobustId.append(ids)
 
@@ -533,8 +538,7 @@ class activateProp:
         self.robustRef = robustRef
         self.time2FinishRef = time2FinishRef
         self.distFromSafeRef = distFromSafeRef
-        # if t > 22:
-        #     print('here')
+
         return trans2Make
 
     def checkUntil(self,allTransitions):

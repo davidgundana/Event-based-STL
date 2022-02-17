@@ -92,7 +92,6 @@ def getSpecs(EvSTL, envInputs):
 
     return t, spotSTL, predLabels
 
-
 def negationNormal(EvSTLForm):
     # Find instances of nested negation
     numToChange = np.size(re.findall('\!\(', EvSTLForm))
@@ -204,12 +203,14 @@ def findInfo(t, pred):
                 foundImp = 0
                 allInputs = []
                 while foundImp == 0:
-                    parent = parent.parent()
                     if parent is not None:
                         if 'input' in parent.label():
                             allInputs.append(parent.label())
                     else:
                         foundImp = 1
+                    if parent is not None:
+                        parent = parent.parent()
+
                 break
     else:
         tempOperator = pred
@@ -264,12 +265,11 @@ def handleUntil(STL, predLabels):
                 numClose += 1
         suff.append(STL[j + 1:locToEnd + 1])
 
-    phiUntil = []
     toAppend = 0
     for i in range(np.size(predLabels, 0)):
         for j in range(np.size(suff, 0)):
             toAppend = 0
-            if predLabels[i][1] + ')' in pref[j] or predLabels[i][1] + ' ' in pref[j]:
+            if predLabels[i][1] + ')' in pref[j] or predLabels[i][1] + ' ' in pref[j] or predLabels[i][1] in pref[j]:
                 toAppend = 1
                 break
         if toAppend == 1:

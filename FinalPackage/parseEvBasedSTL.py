@@ -14,7 +14,7 @@ class Parsed:
         self.initDist = [] # Initial distance
         self.minVel = [] # min velocity
         self.prop_label = absPred[1]  # Label for proposition created
-        self.nom = np.zeros([2, 3], dtype='int') # Nominal controller
+        self.nom = np.zeros([2, 3], dtype='float') # Nominal controller
         self.p = [] # Size of safe set
         self.point = []  #Reference goal point if it exists
         self.funcOf = [] # Function to Evaluate
@@ -106,7 +106,10 @@ class Parsed:
                 self.dir.append(re.search(r'(?=p).+(?=\))', dirRef[i])[0])
                 self.point.append(-1 * float(re.search('(?=(\+|\-)).+(?=\))', dirRef[i])[0]))
             except:
-                pass
+                try:
+                    self.point.append(re.search('(?=posRef\[).+(?<=\])', dirRef[i])[0])
+                except:
+                    pass
         self.point = np.asarray(self.point)
 
         # Change function so that it can be read by python.
@@ -134,7 +137,10 @@ class Parsed:
                     inter[0, l] = inter[0][l - 1] + 1
                 else:
                     intere1 = re.search('pos\[+[+-]?\d+\.?\d*\]', self.dir[ll])
-                    intere = re.search('(?<=\[)\d+(?=\])', intere1[0])[0]
+                    try:
+                        intere = re.search('(?<=\[)\d+(?=\])', intere1[0])[0]
+                    except:
+                        pass
                     inter[0, l] = int(intere)
                     ll += 1
             inter[0][-1] = inter[0][-2] + 1

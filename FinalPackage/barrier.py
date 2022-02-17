@@ -140,16 +140,17 @@ def evBarrier(State, phi, t, Ts, a, b, inputTime, pos, posRef, posStart, hz):
             dir[0] = re.findall('(?<=\().+(?<=\))',dir[0])[0]
             dir[1] = re.findall('(?=\().+(?<=\))', dir[1])[0]
 
-            directionSplit = np.empty([1, np.size(dir)], dtype=object)
-            directionSplit[0, 0] = re.split('[\+,\-]', dir[0])[1]
-            directionSplit[0, 0] = '(' + directionSplit[0, 0]
-            directionSplit[0, 1] = re.split('[\+,\-]', dir[1])[1]
-            directionSplit[0, 1] = '(' + directionSplit[0, 1]
+            # directionSplit = np.empty([1, np.size(dir)], dtype=object)
+            # directionSplit[0, 0] = re.split('[\+,\-]', dir[0])[1]
+            # directionSplit[0, 0] = '(' + directionSplit[0, 0]
+            # directionSplit[0, 1] = re.split('[\+,\-]', dir[1])[1]
+            # directionSplit[0, 1] = '(' + directionSplit[0, 1]
 
             vals = [-eval(elem, {'__builtins__': None}, {'pos': pos, 'np': np, 'posRef': posRef}) for elem in dir]
+            phi.nom.astype('float')
             phi.nom[1, 0:2] = vals
             phi.dist = eval(funcOf)
-            phi.nom.astype('float64')
+
     except:
         print('Couldnt find nominal controller. potential error')
 

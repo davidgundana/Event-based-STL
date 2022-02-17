@@ -19,7 +19,7 @@ if pklNum == '1':
 elif pklNum == '2':
     pckFile = 'NRIActive.pkl'
 print("Running " + pckFile)
-pickle_file_path = os.path.join(my_dir, 'Pickle Files',pckFile)
+pickle_file_path = os.path.join(my_dir, 'PickleFiles',pckFile)
 my_dir = os.path.dirname(os.path.abspath(__file__))
 with open(pickle_file_path, 'rb') as input:
     f = pickle.load(input)

@@ -144,7 +144,7 @@ class getAllCommands:
         # bounds for commands
         lb = -self.maxV
         ub = self.maxV
-
+        wall = self.State.wall
         # Go through all specifications and, if there is implication, log the time that the input became activated.
         # also, if a specification has been satisfied, the input should be reset.
         self.trackInputs(pos, posStart, posRef,t)
@@ -222,7 +222,10 @@ class getAllCommands:
                         if eval(phiRobot[j].params) and phiRobot[j].type == 'ev':
                             nomR = np.zeros((1,3),dtype=float)[0]
                         else:
-                            nomR = self.getNom(self.State, posRob, nomRob, phiRobot[j].p)
+                            try:
+                                nomR = self.getNom(self.State, posRob, nomRob, phiRobot[j].p)
+                            except:
+                                nomR = np.zeros((1, 3), dtype=float)[0]
                         phiRobot[j].nom = phiRobot[j].nom.astype('float')
                         phiRobot[j].nom[1, :] = nomR
                         if np.sum(abs(phiRobot[j].nom[1, :])) != 0:
@@ -252,8 +255,10 @@ class getAllCommands:
                             else:
                                 finalT.append(phiRobot[j].interval[1] + phiRobot[j].inputTime)
                         locOfSoonest = np.argmin(finalT)
-
-                        nominals = np.vstack((nominals[0,:],nominals[locOfSoonest+1,:]))
+                        try:
+                            nominals = np.vstack((nominals[0,:],nominals[locOfSoonest+1,:]))
+                        except:
+                            pass
                         #print('multiple nominal controllers. Attempting to satisfy specification by satisfying in order of time bound')
 
                     Anew = A[3 * i - 3:3 * i]
@@ -297,7 +302,14 @@ class getAllCommands:
                                         map[:, 0], map[:, 1], map[:, 2], map[:, 3])
 
         if not np.any(isect):
-            canReach = 1
+            pt1 = startPos
+            pt2 = goalPoint
+            ptOfI1 = map[:, 0:2]
+            ptOfI2 = map[:, 2:4]
+            dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
+            dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
+            if min(dist2closest1) > .1 and min(dist2closest2) > .1:
+                canReach = 1
 
         if canReach == 0:
             # Find the closest nodes to the goal
@@ -339,7 +351,7 @@ class getAllCommands:
                     ptOfI2 = map[:, 2:4]
                     dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
                     dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-                    if min(dist2closest1) > .5 and min(dist2closest2) > .5:
+                    if min(dist2closest1) > .03 and min(dist2closest2) > .03:
                         closestStartInd.append(idx[i])
                         closestStartDist.append(np.sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) ** 2))
 
