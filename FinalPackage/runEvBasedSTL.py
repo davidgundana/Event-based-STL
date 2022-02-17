@@ -34,7 +34,7 @@ class formData:
 
         # 1 robots
         self.default = np.array(
-            ['1', '5', '.5, .5 ,15', '1.8,-0.75,15', '-1.8,-1.25,0'])
+            ['1', '5', '.25, .25 ,15', '1.8,-0.75,15', '-1.8,-1.25,0'])
 
         # 5 robots
         # self.default = np.array(
