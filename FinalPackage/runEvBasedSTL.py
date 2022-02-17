@@ -30,11 +30,15 @@ class formData:
         my_dir2 = os.path.join(my_dir, 'Specs', '')
         my_dir3 = os.path.join(my_dir, 'Maps', 'RALMapScaled.txt')
         my_dir4 = os.path.join(my_dir, 'Maps', 'RALNodesScaled.txt')
-        my_dir = os.path.join(my_dir, 'Specs', 'RALTest.txt')
+        my_dir = os.path.join(my_dir, 'Specs', 'RALTest2.txt')
 
         # 1 robots
         self.default = np.array(
             ['1', '5', '.25, .25 ,15', '1.8,-1.25,15', '-1.8,-1.25,0'])
+
+        # 3 robots
+        self.default = np.array(
+            ['3', '5', '.25, .25 ,15,.25, .25 ,15,.25, .25 ,15', '1.8,-1.25,15,-.7,-.3,15,-.7,.77,15', '-1.8,-1.25,0,1.9,0.3,0'])
 
         # 5 robots
         # self.default = np.array(
@@ -472,7 +476,7 @@ class cmdInp:
 
 
 if __name__ == "__main__":
-    loadOnStart = 1
+    loadOnStart = 0
     if loadOnStart == 0:
         f = formData()
         f.makeForm()
@@ -552,13 +556,13 @@ if __name__ == "__main__":
             robots = {}
             colors = ["red", "blue", "green","black"]
             for i in range(f.M):
-                robots[str(i)] = ax.plot(f.initPos[3 * i], f.initPos[3 * i + 1], marker='o', markersize=3,
-                                         color=colors[0])
-                # numR = np.floor(f.M/2)
-                # if i < int(numR-1):
-                #     robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[0])
-                # else:
-                #     robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[int(np.floor((i+1)/numR))])
+                # robots[str(i)] = ax.plot(f.initPos[3 * i], f.initPos[3 * i + 1], marker='o', markersize=3,
+                #                          color=colors[0])
+                numR = np.floor(f.M/2)
+                if i < int(numR-1):
+                    robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[0])
+                else:
+                    robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[int(np.floor((i+1)/numR))])
 
             plt.draw()
             plt.pause(0.001)
