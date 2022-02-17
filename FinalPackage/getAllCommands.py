@@ -109,11 +109,14 @@ class getAllCommands:
         badConditions = []
         robustRef = []
         for i in range(np.size(self.conditions, 0)):
-            activate = activateProp.activateProp.activate(act, self.currState, props_, wall_, tempInp_, self.conditions[i], pos, posRef, t,1)
-            if len(activate.robustness) > 0:
-                if any(x < 0 for x in activate.robustness):
-                    badConditions.append(self.conditions[i])
-                    robustRef.append(activate.robustness)
+            try:
+                activate = activateProp.activateProp.activate(act, self.currState, props_, wall_, tempInp_, self.conditions[i], pos, posRef, t,1)
+                if len(activate.robustness) > 0:
+                    if any(x < 0 for x in activate.robustness):
+                        badConditions.append(self.conditions[i])
+                        robustRef.append(activate.robustness)
+            except:
+                pass
         # the badConditions variable shows which combinations of inputs result in a negative robustness score
         # for a proposition
         currInput = self.State.input[::2].astype(int)
