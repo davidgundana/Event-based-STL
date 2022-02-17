@@ -472,7 +472,7 @@ class cmdInp:
 
 
 if __name__ == "__main__":
-    loadOnStart = 0
+    loadOnStart = 1
     if loadOnStart == 0:
         f = formData()
         f.makeForm()
@@ -590,9 +590,9 @@ if __name__ == "__main__":
         allTimes = []
         while runTime < 30:
             loopStart = time.time()
-            if runTime > 0:
+            if runTime > 2:
                 input[0] = 1
-                input[1] = 0
+                input[1] = 2
             if runTime > 3:
                 input[0] = 0
                 input[1] = 0
