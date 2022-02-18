@@ -5,8 +5,8 @@ close all
 load('RALmap.txt')
 load('RALnodes.txt')
 ratio = 1;
-xScale = 1.0800;
-yScale = 0.8771;
+xScale = 1.1217;
+yScale = 0.9143;
 
 RALmap(:,1) = RALmap(:,1)*xScale;
 RALmap(:,3) = RALmap(:,3)*xScale;
