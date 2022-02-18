@@ -1,1 +1,1 @@
-G(((event1) => (ev_[0,20] (sqrt[[pos[0]+1.625]^2+[pos[1]+1.8]^2]<.2)) & ((sqrt[[pos[0]-posRef[0]]^2+[pos[1]-posRef[1]]^2]<1)) un_[20,40] (sqrt[[pos[0]-2]^2+[pos[1]+0.5]^2]<0.5)) & (alw_[0,50] sqrt[[pos[0]-wall[0]]^2+[pos[1]-wall[1]]^2]>0.02))
+G(((event1) => (ev_[0,25] (sqrt[[pos[0]+1.625]^2+[pos[1]+1.8]^2]<.2)) & ((sqrt[[pos[0]-posRef[0]]^2+[pos[1]-posRef[1]]^2]<1)) un_[25,50] (sqrt[[pos[0]-2]^2+[pos[1]+0.5]^2]<0.5)) & (alw_[0,50] sqrt[[pos[0]-wall[0]]^2+[pos[1]-wall[1]]^2]>0.02))
