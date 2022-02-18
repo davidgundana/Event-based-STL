@@ -215,7 +215,6 @@ class getAllCommands:
 
                 alpha = 1
                 b = alpha * (bxtx) + bPartialT[0]
-
                 # check for changes.these are the robots affected by barrier functions
                 if np.any(bPartialX):
                     nominals = np.empty((1, 3), dtype=float)
@@ -252,12 +251,18 @@ class getAllCommands:
                             if j > 0:
                                 nominals = np.delete(nominals, 2, 0)
                         finalT = []
+                        typeOf = []
                         for j in range(np.size(phiRobot)):
                             if phiRobot[j].implies == 0:
                                 finalT.append(phiRobot[j].interval[1])
                             else:
                                 finalT.append(phiRobot[j].interval[1] + phiRobot[j].inputTime)
-                        locOfSoonest = np.argmin(finalT)
+                            typeOf.append(phiRobot[j].type)
+                        if np.all(finalT == finalT[0]):
+                            locOfSoonest = typeOf.index('ev')
+                        else:
+                            locOfSoonest = np.argmin(finalT)
+
                         try:
                             nominals = np.vstack((nominals[0,:],nominals[locOfSoonest+1,:]))
                         except:

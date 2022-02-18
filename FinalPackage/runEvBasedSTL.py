@@ -476,7 +476,7 @@ class cmdInp:
 
 
 if __name__ == "__main__":
-    loadOnStart = 0
+    loadOnStart = 1
     if loadOnStart == 0:
         f = formData()
         f.makeForm()
@@ -556,13 +556,13 @@ if __name__ == "__main__":
             robots = {}
             colors = ["red", "blue", "green","black"]
             for i in range(f.M):
-                # robots[str(i)] = ax.plot(f.initPos[3 * i], f.initPos[3 * i + 1], marker='o', markersize=3,
-                #                          color=colors[0])
-                numR = np.floor(f.M/2)
-                if i < int(numR-1):
-                    robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[0])
-                else:
-                    robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[int(np.floor((i+1)/numR))])
+                robots[str(i)] = ax.plot(f.initPos[3 * i], f.initPos[3 * i + 1], marker='o', markersize=3,
+                                         color=colors[0])
+                # numR = np.floor(f.M/2)
+                # if i < int(numR-1):
+                #     robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[0])
+                # else:
+                #     robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[int(np.floor((i+1)/numR))])
 
             plt.draw()
             plt.pause(0.001)
@@ -592,7 +592,7 @@ if __name__ == "__main__":
         currState = 0
         input = I.input
         allTimes = []
-        while runTime < 30:
+        while runTime < 40:
             loopStart = time.time()
             if runTime > 2:
                 input[0] = 1
@@ -641,11 +641,11 @@ if __name__ == "__main__":
                 else:
                     robots[str(i)] = ax.plot(posX[i],posY[i], marker='o', markersize=3, color=colors[int(np.floor((i+1)/numR))])
 
-
+            ax.plot(posPX[0], posPY[0], marker='o', markersize=3, color='black')
             # Hard Code pos of human and spills for experiment
-            posPX[0] = posX[0]
-            posPY[0] = posY[0]
-            posPTheta[0] = posTheta[0]
+            # posPX[0] = posX[0]
+            # posPY[0] = posY[0]
+            # posPTheta[0] = posTheta[0]
                 # robots[str(i)] = ax.plot(posX[i],posY[i], marker='o', markersize=3, color=colors[int(np.floor(i/2))])
 
             if realTime:

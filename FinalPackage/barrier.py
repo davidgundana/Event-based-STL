@@ -40,7 +40,7 @@ def barrier(State,pos, posStart,posRef, t, Ts, phi, tmax, hz):
                 if isUntTrue == 1 and t >= a:
                     b = t - .1
 
-            if t >= a and t <= b:
+            if t >= a + inputTime and t <= b + inputTime:
                 bxt_i.append(alBarrier(State, phi[i], t, Ts, a, b, pos, posRef, tmax, None))
                 activatedProps.append(phi[i].prop_label)
 
@@ -93,9 +93,9 @@ def evBarrier(State, phi, t, Ts, a, b, inputTime, pos, posRef, posStart, hz):
         else:
             tempFunc = re.sub('pos\[', 'posStart[', funcOf)
             if numPos == 1:
-                initDist = abs(eval(tempFunc) - p) + 30
+                initDist = abs(eval(tempFunc) - p) + 5
             else:
-                initDist = eval(tempFunc) + 30
+                initDist = eval(tempFunc) + 5
             bInit = signF * (initDist - p)
             aInit = (signF * p - signF * bInit) / b
             # gamInit = (t - (1 / hz) - a) * aInit + bInit
@@ -191,7 +191,7 @@ def alBarrier(State, phi, t, Ts, a, b, pos, posRef, tmax, unt):
                 else:
                     bxt_i = bxt_i
 
-
+        bxt_i = 5 * bxt_i
         phi.bxt_i = bxt_i
 
     else:

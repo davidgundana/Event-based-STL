@@ -45,6 +45,11 @@ class activateProp:
                 propName = self.uncontrollableProp[i]
                 exec('props.' + propName + ' = ' + str(self.conditions[i]))
 
+        for i in range(len(self.State.phi)):
+            if self.State.phi[i].type == 'alw':
+                if t < self.State.phi[i].interval[0] or t > self.State.phi[i].interval[1]:
+                    propName = self.State.phi[i].prop_label
+                    exec('props.' + propName + ' = ' '1')
         #find the transition that is being made based on the conditions
         conditions = self.State.State[currState].cond
         evalCond = eval(','.join(conditions), {'__builtins__': None}, {'props': props})
