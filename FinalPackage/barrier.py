@@ -186,7 +186,7 @@ def alBarrier(State, phi, t, Ts, a, b, pos, posRef, tmax, unt):
                 if eval(funcOf) > (signF*1+p):
                     bxt_i = 0
             else:
-                if eval(funcOf) > (signF * 5*p):
+                if eval(funcOf) > (signF * 3*p):
                     bxt_i = 0
                 else:
                     bxt_i = bxt_i

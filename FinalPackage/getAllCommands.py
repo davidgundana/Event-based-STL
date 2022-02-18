@@ -258,11 +258,13 @@ class getAllCommands:
                             else:
                                 finalT.append(phiRobot[j].interval[1] + phiRobot[j].inputTime)
                             typeOf.append(phiRobot[j].type)
-                        if np.all(finalT == finalT[0]):
-                            locOfSoonest = typeOf.index('ev')
-                        else:
+                        try:
+                            if np.all(finalT == finalT[0]):
+                                locOfSoonest = typeOf.index('ev')
+                            else:
+                                locOfSoonest = np.argmin(finalT)
+                        except:
                             locOfSoonest = np.argmin(finalT)
-
                         try:
                             nominals = np.vstack((nominals[0,:],nominals[locOfSoonest+1,:]))
                         except:
