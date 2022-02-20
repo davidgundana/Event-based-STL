@@ -161,7 +161,7 @@ class getAllCommands:
         self.currState = activate.currState
 
         # Toggle to turn on/off pre failure warnings
-        preFailure = 0
+        preFailure = 1
         if preFailure:
             # this is for a pre-failure warning. We want to see what happens if things change with the inputs
             self.findConditions(activate)

@@ -503,7 +503,7 @@ if __name__ == "__main__":
             savemat(filePathM, dict)
     elif loadOnStart == 1:
         my_dir = os.path.dirname(os.path.abspath(__file__))
-        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'RALspecPhysical.pkl')
+        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'RALTest.pkl')
         with open(pickle_file_path, 'rb') as input:
             f = pickle.load(input)
         #Get the inputs for the function to get robot commands. Inputs can be from gui or from a copied message
@@ -560,13 +560,13 @@ if __name__ == "__main__":
             robots = {}
             colors = ["red", "blue", "green","black"]
             for i in range(f.M):
-                # robots[str(i)] = ax.plot(f.initPos[3 * i], f.initPos[3 * i + 1], marker='o', markersize=3,
-                #                          color=colors[0])
-                numR = np.floor(f.M/2)
-                if i < int(numR-1):
-                    robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[0])
-                else:
-                    robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[int(np.floor((i+1)/numR))])
+                robots[str(i)] = ax.plot(f.initPos[3 * i], f.initPos[3 * i + 1], marker='o', markersize=3,
+                                         color=colors[0])
+                # numR = np.floor(f.M/2)
+                # if i < int(numR-1):
+                #     robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[0])
+                # else:
+                #     robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker='o', markersize=3, color=colors[int(np.floor((i+1)/numR))])
 
             plt.draw()
             plt.pause(0.001)
@@ -596,7 +596,7 @@ if __name__ == "__main__":
         currState = 0
         input = I.input
         allTimes = []
-        while runTime < 40:
+        while runTime < 50:
             loopStart = time.time()
             if runTime > 2:
                 input[0] = 1
@@ -645,7 +645,7 @@ if __name__ == "__main__":
                 else:
                     robots[str(i)] = ax.plot(posX[i],posY[i], marker='o', markersize=3, color=colors[int(np.floor((i+1)/numR))])
 
-            ax.plot(posPX[0], posPY[0], marker='o', markersize=3, color='black')
+            # ax.plot(posPX[0], posPY[0], marker='o', markersize=3, color='black')
             # Hard Code pos of human and spills for experiment
             posPX[0] = posX[0]
             posPY[0] = posY[0]

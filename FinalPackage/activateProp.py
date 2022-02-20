@@ -408,10 +408,17 @@ class activateProp:
                     #Need to do prioritization
                     times = []
                     for j in range(np.size(phiRobot)):
-                        if isinstance(phiRobot[j].inputTime, float):
-                            timeLeft = phiRobot[j].interval[1] + phiRobot[j].inputTime
+                        if self.preF == 1 and not isinstance(phiRobot[j].inputTime, float):
+                            timeLeft = phiRobot[j].interval[1]
                         else:
-                            timeLeft = phiRobot[j].interval[1] + t
+                            if t > phiRobot[j].interval[1]:
+                                timeLeft = (phiRobot[j].interval[1] + phiRobot[j].inputTime)
+                            else:
+                                timeLeft = (phiRobot[j].interval[1] + phiRobot[j].inputTime)- t
+                        # if isinstance(phiRobot[j].inputTime, float):
+                        #     timeLeft = phiRobot[j].interval[1] + phiRobot[j].inputTime
+                        # else:
+                        #     timeLeft = phiRobot[j].interval[1] + t
                         times.append(timeLeft)
 
                     isTie = np.all(times == times[0])
@@ -481,7 +488,7 @@ class activateProp:
                             maxV = self.maxV[3 * robot - 3]
                             time2Finish = totalDist / maxV
                             if self.preF == 1 and not isinstance(phiRobot[j].inputTime, float):
-                                timeRemaining = phiRobot[0].interval[1]
+                                timeRemaining = phiRobot[j].interval[1]
                             else:
                                 timeRemaining = (phiRobot[j].interval[1] + phiRobot[j].inputTime) - t
                             timeBuffer = timeRemaining - (time2Finish + time2FinishPrev)
