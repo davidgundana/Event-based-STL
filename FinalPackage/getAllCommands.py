@@ -335,9 +335,17 @@ class getAllCommands:
                                                     self.State.nodes[idx[i], 1], map[:, 0], map[:, 1], map[:, 2],map[:, 3])
 
                 if not np.any(isect):
-                    closestGoalInd = idx[i]
-                    closestGoal = self.State.nodes[closestGoalInd]
-                    break
+                    pt1 = startPos
+                    pt2 = self.State.nodes[idx[i], 0:2]
+                    ptOfI1 = map[:, 0:2]
+                    ptOfI2 = map[:, 2:4]
+                    dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
+                    dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
+
+                    if min(dist2closest1) > .1 and min(dist2closest2) > .1:
+                        closestGoalInd = idx[i]
+                        closestGoal = self.State.nodes[closestGoalInd]
+                        break
 
             # Find the closest nodes to the start
             dist2p2 = []
@@ -361,7 +369,7 @@ class getAllCommands:
                     ptOfI2 = map[:, 2:4]
                     dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
                     dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-                    if min(dist2closest1) > .03 and min(dist2closest2) > .03:
+                    if min(dist2closest1) > .05 and min(dist2closest2) > .05:
                         closestStartInd.append(idx[i])
                         closestStartDist.append(np.sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) ** 2))
 

@@ -336,7 +336,7 @@ class specInfo:
                             ptOfI2 = self.map[:, 2:4]
                             dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
                             dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-                            if min(dist2closest1) > .03 and min(dist2closest2) > .03:
+                            if min(dist2closest1) > .07 and min(dist2closest2) > .07:
                                 nodeGraph[i, j] = np.sqrt(
                                     (self.nodes[i, 0] - self.nodes[j, 0]) ** 2 + (self.nodes[i, 1] - self.nodes[j, 1]) ** 2)
 

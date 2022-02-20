@@ -30,19 +30,19 @@ class formData:
         my_dir2 = os.path.join(my_dir, 'Specs', '')
         my_dir3 = os.path.join(my_dir, 'Maps', 'RALMapScaled.txt')
         my_dir4 = os.path.join(my_dir, 'Maps', 'RALNodesScaled.txt')
-        my_dir = os.path.join(my_dir, 'Specs', 'RALspecPhysical.txt')
+        my_dir = os.path.join(my_dir, 'Specs', 'RALTest.txt')
 
         # 1 robots
-        # self.default = np.array(
-        #     ['1', '5', '.25, .25 ,15', '1.8,-1.25,15', '-1.8,-1.25,0'])
+        self.default = np.array(
+            ['1', '5', '.25, .25 ,15', '1.8,-1.25,15', '-1.8,-1.25,0'])
 
         # 3 robots
         # self.default = np.array(
         #     ['3', '5', '.25, .25 ,15,.25, .25 ,15,.25, .25 ,15', '1.8,-1.25,15,-.7,-.3,15,-.7,.77,15', '-1.8,-1.25,0,1.9,0.3,0'])
 
         # 5 robots(physical)
-        self.default = np.array(
-            ['5', '5', '.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15', '1.8,-1.25,15,-.7,-.3,15,-.7,.77,15,.1,-.8,15,.4,-.8,15', '-1.8,-1.25,0,1.9,0.3,0'])
+        # self.default = np.array(
+        #     ['5', '5', '.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15', '1.8,-1.25,15,-.7,-.3,15,-.7,.77,15,.1,-.8,15,.4,-.8,15', '-1.8,-1.25,0,1.9,0.3,0'])
 
         # 5 robots
         # self.default = np.array(
@@ -545,7 +545,7 @@ if __name__ == "__main__":
             plt.ion()
             plt.show()
             ax.plot(xwall, ywall, color="black")
-            dispRoadmap = 0
+            dispRoadmap = 1
             if dispRoadmap:
                 xNodes = []
                 yNodes = []
