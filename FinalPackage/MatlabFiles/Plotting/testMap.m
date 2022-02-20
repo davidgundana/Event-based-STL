@@ -19,7 +19,7 @@ writematrix(RALmap, 'RALMapScaled.txt','Delimiter','space')
 
 RALnodes(:,1) = RALnodes(:,1)*xScale;
 RALnodes(:,2) = RALnodes(:,2)*yScale;
-plot(RALnodes(:,1),RALnodes(:,2),'bo')
+% plot(RALnodes(:,1),RALnodes(:,2),'bo')
 writematrix(RALnodes, 'RALNodesScaled.txt','Delimiter','space')
 % rectangle('Position',[-5,30,50,10],'FaceColor',[0 0 0])
 % rectangle('Position',[-5,-10,50,10],'FaceColor',[0 0 0])

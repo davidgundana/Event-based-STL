@@ -335,7 +335,7 @@ class getAllCommands:
                                                     self.State.nodes[idx[i], 1], map[:, 0], map[:, 1], map[:, 2],map[:, 3])
 
                 if not np.any(isect):
-                    pt1 = startPos
+                    pt1 = goalPoint
                     pt2 = self.State.nodes[idx[i], 0:2]
                     ptOfI1 = map[:, 0:2]
                     ptOfI2 = map[:, 2:4]
