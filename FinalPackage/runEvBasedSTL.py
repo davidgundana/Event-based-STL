@@ -42,7 +42,7 @@ class formData:
 
         # 5 robots(physical)
         self.default = np.array(
-            ['5', '5', '.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15', '1.8,-1.25,15,-.7,-.3,15,-.7,.77,15,.1,-.8,15,.4,-.8,15', '-1.8,-1.25,0,1.9,0.3,0,-1.35,-.8,0'])
+            ['5', '5', '.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15', '1.8,-1.25,15,-.7,-.3,15,-.7,.77,15,-.4,-.8,15,.4,-.8,15', '-1.8,-1.25,0,1.9,0.3,0,-1.35,-.8,0'])
 
         # 5 robots
         # self.default = np.array(
@@ -598,9 +598,9 @@ if __name__ == "__main__":
         allTimes = []
         while runTime < 30:
             loopStart = time.time()
-            if runTime > 0:
+            if runTime > 40:
                 input[0] = 1
-                input[1] = 0
+                input[1] = 40
             if runTime > 3:
                 input[0] = 0
                 input[1] = 0
@@ -611,10 +611,10 @@ if __name__ == "__main__":
                 input[2] = 0
                 input[3] = 0
             if f.N > 2:
-                if runTime > 0:
+                if runTime > 18:
                     input[4] = 1
-                    input[5] = 0
-                if runTime > 6:
+                    input[5] = 18
+                if runTime > 20:
                     input[4] = 0
                     input[5] = 0
 

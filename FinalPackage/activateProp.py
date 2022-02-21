@@ -327,6 +327,7 @@ class activateProp:
                     costToStart = np.sqrt((closestStart[0] - startPos[0]) ** 2 + (closestStart[1] - startPos[1]) ** 2)
                     costToGoal = np.sqrt((goalPoint[0] - closestGoal[0]) ** 2 + (goalPoint[1] - closestGoal[1]) ** 2)
                     pathCost = self.State.nodeConnections[closestStartInd][closestGoalInd][-1]
+
                     cost = costToStart + costToGoal + pathCost
                 except:
                     print('here')
@@ -550,7 +551,8 @@ class activateProp:
         self.robustRef = robustRef
         self.time2FinishRef = time2FinishRef
         self.distFromSafeRef = distFromSafeRef
-
+        if t > 19:
+            print('here')
         return trans2Make
 
     def checkUntil(self,allTransitions):

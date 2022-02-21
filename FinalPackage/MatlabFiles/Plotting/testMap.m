@@ -21,7 +21,7 @@ writematrix(RALmap, 'RALMapScaled.txt','Delimiter','space')
 
 RALnodes(:,1) = RALnodes(:,1)*xScale;
 RALnodes(:,2) = RALnodes(:,2)*yScale;
-% plot(RALnodes(:,1),RALnodes(:,2),'bo')
+plot(RALnodes(:,1),RALnodes(:,2),'bo')
 writematrix(RALnodes, 'RALNodesScaled.txt','Delimiter','space')
 rectangle('Position',[-1.66*xScale,1.2*yScale,.86*xScale,.3*yScale],'FaceColor',[0 0 0])
 rectangle('Position',[-1.66*xScale,0.6*yScale,.86*xScale,.3*yScale],'FaceColor',[0 0 0])
@@ -51,11 +51,11 @@ yOffset = .21;
 xlim([min([RALmap(:,1);RALmap(:,3)])-.05, max([RALmap(:,1);RALmap(:,3)])+.05+xOffset])
 ylim([min([RALmap(:,2);RALmap(:,4)])-.05-yOffset, max([RALmap(:,2);RALmap(:,4)])+.05])
 
-set(gca,'xdir','reverse','ydir','reverse')
+%set(gca,'xdir','reverse','ydir','reverse')
 set(gca,'DataAspectRatioMode','auto')
 
 set(gca,'Position',[0 0 1 1])
-set(gcf,'MenuBar','none')
+%set(gcf,'MenuBar','none')
 set(gca,'XTick',[])
 set(gca,'YTick',[])
 % saveas(gcf,'workspace.png')
