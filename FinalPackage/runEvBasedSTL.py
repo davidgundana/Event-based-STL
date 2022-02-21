@@ -480,7 +480,7 @@ class cmdInp:
 
 
 if __name__ == "__main__":
-    loadOnStart = 0
+    loadOnStart = 1
     if loadOnStart == 0:
         f = formData()
         f.makeForm()
@@ -545,7 +545,7 @@ if __name__ == "__main__":
             plt.ion()
             plt.show()
             ax.plot(xwall, ywall, color="black")
-            dispRoadmap = 1
+            dispRoadmap = 0
             if dispRoadmap:
                 xNodes = []
                 yNodes = []
@@ -598,10 +598,10 @@ if __name__ == "__main__":
         allTimes = []
         while runTime < 50:
             loopStart = time.time()
-            if runTime > 2:
+            if runTime > 16:
                 input[0] = 1
-                input[1] = 2
-            if runTime > 3:
+                input[1] = 16
+            if runTime > 17:
                 input[0] = 0
                 input[1] = 0
             if runTime > 3:
@@ -649,6 +649,8 @@ if __name__ == "__main__":
             # Hard Code pos of human and spills for experiment
             posPX[0] = posX[0]
             posPY[0] = posY[0]
+            posPX[0] = -1.625
+            posPY[0] = -1.8
             posPTheta[0] = posTheta[0]
                 # robots[str(i)] = ax.plot(posX[i],posY[i], marker='o', markersize=3, color=colors[int(np.floor(i/2))])
 

@@ -47,7 +47,7 @@ class activateProp:
 
         for i in range(len(self.State.phi)):
             if self.State.phi[i].type == 'alw':
-                if t < self.State.phi[i].interval[0] or t > self.State.phi[i].interval[1]:
+                if t < self.State.phi[i].interval[0] + self.State.phi[i].inputTime or t > self.State.phi[i].interval[1] + self.State.phi[i].inputTime:
                     propName = self.State.phi[i].prop_label
                     exec('props.' + propName + ' = ' '1')
         #find the transition that is being made based on the conditions
