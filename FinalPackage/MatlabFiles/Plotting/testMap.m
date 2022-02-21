@@ -45,7 +45,7 @@ set(gca,'DataAspectRatioMode','auto')
 % axis equal
 % set(gca,'DataAspectRatio',[1 1 1])
 set(gca,'Position',[0 0 1 1])
-set(gcf,'MenuBar','none')
+%set(gcf,'MenuBar','none')
 set(gca,'XTick',[])
 set(gca,'YTick',[])
 % saveas(gcf,'workspace.png')

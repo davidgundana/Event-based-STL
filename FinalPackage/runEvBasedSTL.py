@@ -42,7 +42,7 @@ class formData:
 
         # 5 robots(physical)
         self.default = np.array(
-            ['5', '5', '.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15', '1.8,-1.25,15,-.7,-.3,15,-.7,.77,15,.1,-.8,15,.4,-.8,15', '-1.8,-1.25,0,1.9,0.3,0'])
+            ['5', '5', '.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15', '1.8,-1.25,15,-.7,-.3,15,-.7,.77,15,.1,-.8,15,.4,-.8,15', '-1.8,-1.25,0,1.9,0.3,0,-1.35,-.8,0'])
 
         # 5 robots
         # self.default = np.array(
@@ -596,12 +596,12 @@ if __name__ == "__main__":
         currState = 0
         input = I.input
         allTimes = []
-        while runTime < 50:
+        while runTime < 30:
             loopStart = time.time()
-            if runTime > 16:
+            if runTime > 2:
                 input[0] = 1
-                input[1] = 16
-            if runTime > 17:
+                input[1] = 2
+            if runTime > 3:
                 input[0] = 0
                 input[1] = 0
             if runTime > 3:
@@ -611,10 +611,10 @@ if __name__ == "__main__":
                 input[2] = 0
                 input[3] = 0
             if f.N > 2:
-                if runTime > 9:
+                if runTime > 5:
                     input[4] = 1
-                    input[5] = 9
-                if runTime > 10:
+                    input[5] = 5
+                if runTime > 6:
                     input[4] = 0
                     input[5] = 0
 
@@ -649,8 +649,8 @@ if __name__ == "__main__":
             # Hard Code pos of human and spills for experiment
             posPX[0] = posX[0]
             posPY[0] = posY[0]
-            posPX[0] = -1.625
-            posPY[0] = -1.8
+            # posPX[0] = -1.625
+            # posPY[0] = -1.8
             posPTheta[0] = posTheta[0]
                 # robots[str(i)] = ax.plot(posX[i],posY[i], marker='o', markersize=3, color=colors[int(np.floor(i/2))])
 
