@@ -7,6 +7,8 @@ load('RALnodes.txt')
 ratio = 1;
 xScale = 1.1217;
 yScale = 0.9143;
+xScale = 1;
+yScale = 1;
 
 RALmap(:,1) = RALmap(:,1)*xScale;
 RALmap(:,3) = RALmap(:,3)*xScale;
@@ -21,10 +23,10 @@ RALnodes(:,1) = RALnodes(:,1)*xScale;
 RALnodes(:,2) = RALnodes(:,2)*yScale;
 % plot(RALnodes(:,1),RALnodes(:,2),'bo')
 writematrix(RALnodes, 'RALNodesScaled.txt','Delimiter','space')
-% rectangle('Position',[-5,30,50,10],'FaceColor',[0 0 0])
-% rectangle('Position',[-5,-10,50,10],'FaceColor',[0 0 0])
-% rectangle('Position',[-5,-5,5,40],'FaceColor',[0 0 0])
-% rectangle('Position',[40,-5,5,50],'FaceColor',[0 0 0])
+rectangle('Position',[-1.66,1.2,-.8,1.5],'FaceColor',[0 0 0])
+rectangle('Position',[-1.66,0.6,-0.8,.9],'FaceColor',[0 0 0])
+rectangle('Position',[-1.75,-.25,-.75,0],'FaceColor',[0 0 0])
+rectangle('Position',[-.2,-.75,.1,.5],'FaceColor',[0 0 0])
 % rectangle('Position',[8,-5,24,7],'FaceColor',[0 0 0])
 % rectangle('Position',[11,6,4,3],'FaceColor',[0 0 0])
 hold on 
@@ -40,12 +42,11 @@ yOffset = .21;
 xlim([min([RALmap(:,1);RALmap(:,3)])-.05, max([RALmap(:,1);RALmap(:,3)])+.05+xOffset])
 ylim([min([RALmap(:,2);RALmap(:,4)])-.05-yOffset, max([RALmap(:,2);RALmap(:,4)])+.05])
 
-set(gca,'xdir','reverse','ydir','reverse')
+%set(gca,'xdir','reverse','ydir','reverse')
 set(gca,'DataAspectRatioMode','auto')
-% axis equal
-% set(gca,'DataAspectRatio',[1 1 1])
+
 set(gca,'Position',[0 0 1 1])
-set(gcf,'MenuBar','none')
+%set(gcf,'MenuBar','none')
 set(gca,'XTick',[])
 set(gca,'YTick',[])
 % saveas(gcf,'workspace.png')
