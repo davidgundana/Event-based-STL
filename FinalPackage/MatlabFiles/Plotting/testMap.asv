@@ -7,8 +7,8 @@ load('RALnodes.txt')
 ratio = 1;
 xScale = 1.1217;
 yScale = 0.9143;
-% xScale = 1;
-% yScale = 1;
+xScale = 1;
+yScale = 1;
 
 RALmap(:,1) = RALmap(:,1)*xScale;
 RALmap(:,3) = RALmap(:,3)*xScale;
@@ -35,7 +35,7 @@ rectangle('Position',[.5*xScale,-.15*yScale,.25*xScale,.25*yScale],'FaceColor',[
 
 rectangle('Position',[-.1*xScale,1*yScale,.2*xScale,.75*yScale],'FaceColor',[0 0 0])
 rectangle('Position',[.4*xScale,1*yScale,.2*xScale,.75*yScale],'FaceColor',[0 0 0])
-rectangle('Position',[1.33*xScale,.5*yScale,.33*xScale,1*yScale],'FaceColor',[0 0 0])
+rectangle('Position',[1.33*xScale,.5*yScale,.25*xScale,.25*yScale],'FaceColor',[0 0 0])
 % rectangle('Position',[8,-5,24,7],'FaceColor',[0 0 0])
 % rectangle('Position',[11,6,4,3],'FaceColor',[0 0 0])
 hold on 
