@@ -480,7 +480,7 @@ class cmdInp:
 
 
 if __name__ == "__main__":
-    loadOnStart = 1
+    loadOnStart = 0
     if loadOnStart == 0:
         f = formData()
         f.makeForm()

@@ -198,6 +198,23 @@ def alBarrier(State, phi, t, Ts, a, b, pos, posRef, tmax, unt):
         valP = [1.4 * p[0], (p[0] + p[1]) / 2, .6 * p[1]]
         coeff = np.polyfit(valP,[0,1,0],2)
         bxt_i = coeff[0]*eval(funcOf)**2 + coeff[1]*eval(funcOf) + coeff[2]
+    dir = re.findall('(?=\().+?(?=\*)', funcOf)
+
+    if bxt_i != 0:
+        try:
+            dir[0] = re.findall('(?<=\().+(?<=\))',dir[0])[0]
+            dir[1] = re.findall('(?=\().+(?<=\))', dir[1])[0]
+
+            if 'wall' in funcOf:
+                vals = [-eval(elem, {'__builtins__': None}, {'pos': pos, 'np': np, 'posRef': posRef, 'wall': wall}) for elem in dir]
+            else:
+                vals = [-eval(elem, {'__builtins__': None}, {'pos': pos, 'np': np, 'posRef': posRef}) for elem in dir]
+
+            phi.nom.astype('float')
+            phi.nom[1, 0:2] = [0,0]
+
+        except:
+            print('Couldnt find nominal controller. potential error')
 
     return bxt_i
 

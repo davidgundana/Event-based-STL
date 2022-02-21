@@ -216,12 +216,16 @@ class getAllCommands:
                 alpha = 1
                 b = alpha * (bxtx) + bPartialT[0]
                 # check for changes.these are the robots affected by barrier functions
+                if t > 17.6:
+                    print('here')
                 if np.any(bPartialX):
                     nominals = np.empty((1, 3), dtype=float)
                     for j in range(np.size(phiRobot)):
                         posRob = pos[phiRobot[j].nom[0, :].astype('int')]
                         nomRob = phiRobot[j].nom[1, :]
                         if eval(phiRobot[j].params) and phiRobot[j].type == 'ev':
+                            nomR = np.zeros((1,3),dtype=float)[0]
+                        elif phiRobot[j].type == 'alw':
                             nomR = np.zeros((1,3),dtype=float)[0]
                         else:
                             try:
