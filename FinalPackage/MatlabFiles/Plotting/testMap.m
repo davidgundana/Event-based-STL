@@ -51,11 +51,11 @@ yOffset = .21;
 xlim([min([RALmap(:,1);RALmap(:,3)])-.05, max([RALmap(:,1);RALmap(:,3)])+.05+xOffset])
 ylim([min([RALmap(:,2);RALmap(:,4)])-.05-yOffset, max([RALmap(:,2);RALmap(:,4)])+.05])
 
-%set(gca,'xdir','reverse','ydir','reverse')
+set(gca,'xdir','reverse','ydir','reverse')
 set(gca,'DataAspectRatioMode','auto')
 
 set(gca,'Position',[0 0 1 1])
-%set(gcf,'MenuBar','none')
+set(gcf,'MenuBar','none')
 set(gca,'XTick',[])
 set(gca,'YTick',[])
 % saveas(gcf,'workspace.png')

@@ -480,7 +480,7 @@ class cmdInp:
 
 
 if __name__ == "__main__":
-    loadOnStart = 1
+    loadOnStart = 0
     if loadOnStart == 0:
         f = formData()
         f.makeForm()
@@ -545,7 +545,7 @@ if __name__ == "__main__":
             plt.ion()
             plt.show()
             ax.plot(xwall, ywall, color="black")
-            dispRoadmap = 0
+            dispRoadmap = 1
             if dispRoadmap:
                 xNodes = []
                 yNodes = []
