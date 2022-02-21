@@ -159,7 +159,6 @@ class getAllCommands:
         print(activate.props2Activate)
         self.props2Activate = activate.props2Activate
         self.currState = activate.currState
-
         # Toggle to turn on/off pre failure warnings
         preFailure = 0
         if preFailure:
@@ -192,7 +191,7 @@ class getAllCommands:
             if phiRobot != []:
                 # find the candidate barrier function at the position and find partial derivatives
                 bxtx, phiRobotPlace, propsActivated, bxt_eventually = barrier.barrier(self, pos, posStart, posRef, t,
-                                                                                      Ts, phiRobot, 100, self.hz)
+                                                                                      Ts, phiRobot, 100, self.hz,wall,0)
 
                 phiRobot = []
                 ids = []
@@ -207,7 +206,7 @@ class getAllCommands:
                 self.bxt_eventually.append(bxt_eventually)
 
                 [bPartialX, bPartialT] = barrier.partials(self, pos, posStart, posRef, t, Ts, phiRobot, 100, self.hz,
-                                                          bxtx)
+                                                          bxtx,wall)
 
                 A = -1 * np.dot(np.array(bPartialX), np.identity(3 * self.M))
                 if abs(bPartialT[0]) > 50:
@@ -216,7 +215,6 @@ class getAllCommands:
                 alpha = 1
                 b = alpha * (bxtx) + bPartialT[0]
                 # check for changes.these are the robots affected by barrier functions
-
                 if np.any(bPartialX):
                     nominals = np.empty((1, 3), dtype=float)
                     for j in range(np.size(phiRobot)):
@@ -245,7 +243,6 @@ class getAllCommands:
 
                             nominals = np.vstack((nominals, thisNom[0, :], thisNomBounded))
                             # break
-
                     nominals = nominals[1:, :]
 
                     # This is to check if there are multiple nominal controllers (2+ activated cbfs for same robot)
@@ -299,7 +296,6 @@ class getAllCommands:
                         nom[0][3 * i - 2] = nomInd[1]
                         nom[0][3 * i - 1] = nomInd[2]
                     # if nom[0][0] == 0 and t > 5:
-                    #     print('here')
         self.nom = nom
 
 
