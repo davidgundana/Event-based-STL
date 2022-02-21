@@ -568,7 +568,8 @@ class activateProp:
                     if '&' not in splitPhiUntil[j] and '|' not in splitPhiUntil[j]:
                         predOfI = re.search('(?<=props\.).+?(?=(\)|\s))', splitPhiUntil[j])[0]
                         locOfPred = list(self.State.controllableProp).index(predOfI)
-                        ia2.append(self.State.controllablePropOrder[locOfPred])
+                        #ia2.append(self.State.controllablePropOrder[locOfPred])
+                        ia2.append(locOfPred)
 
                 for j in range(np.size(allTransitions, 0)):
                     actEv = 0
