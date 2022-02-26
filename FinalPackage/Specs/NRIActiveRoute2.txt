@@ -1,0 +1,1 @@
+G((ev_[0,7] sqrt[[pos[0]-posRef[0]]^2+[pos[1]-posRef[1]]^2]<4) & (ev_[0,600] sqrt[[pos[0]+103.35]^2+[pos[1]-69.21]^2]<2) & ((line1) => (ev_[0,160] sqrt[[pos[0]-posRef[0]]^2+[pos[1]-posRef[1]]^2]<10)) & (alw_[0,300] sqrt[[pos[0]-wall[0]]^2+[pos[1]-wall[1]]^2]>0.4) & (alw_[0,300] sqrt[[pos[0]-posRef[0]]^2+[pos[1]-posRef[1]]^2]>1))

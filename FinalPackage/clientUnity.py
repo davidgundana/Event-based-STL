@@ -13,11 +13,15 @@ from activateProp import activateProp
 tpath = os.getcwd()
 my_dir = os.path.dirname(os.path.abspath(__file__))
 
-pklNum = input("Enter specification you want to run (1 for passive or 2 for active) and press enter: ")
-if pklNum == '1':
-    pckFile = 'NRIPassive.pkl'
-elif pklNum == '2':
-    pckFile = 'NRIActive.pkl'
+pklNum = input("Enter specification you want to run (p1 for passive route 1, a1 for active route 1, p2 for passive route 2, or a2 for active route 2) and press enter: ")
+if pklNum == 'p1':
+    pckFile = 'NRIPassiveRoute1.pkl'
+elif pklNum == 'a1':
+    pckFile = 'NRIActiveRoute1.pkl'
+elif pklNum == 'p2':
+    pckFile = 'NRIPassiveRoute2.pkl'
+elif pklNum == 'a2':
+    pckFile = 'NRIActiveRoute2.pkl'
 print("Running " + pckFile)
 pickle_file_path = os.path.join(my_dir, 'PickleFiles',pckFile)
 my_dir = os.path.dirname(os.path.abspath(__file__))

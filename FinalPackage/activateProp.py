@@ -551,8 +551,6 @@ class activateProp:
         self.robustRef = robustRef
         self.time2FinishRef = time2FinishRef
         self.distFromSafeRef = distFromSafeRef
-        if t > 19:
-            print('here')
         return trans2Make
 
     def checkUntil(self,allTransitions):

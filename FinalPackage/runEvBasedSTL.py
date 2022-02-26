@@ -29,9 +29,14 @@ class formData:
         # Default spec location
         my_dir = os.path.dirname(os.path.abspath(__file__))
         my_dir2 = os.path.join(my_dir, 'Specs', '')
-        my_dir3 = os.path.join(my_dir, 'Maps', 'RALMapScaled.txt')
-        my_dir4 = os.path.join(my_dir, 'Maps', 'RALNodesScaled.txt')
-        my_dir = os.path.join(my_dir, 'Specs', 'RALspecPhysical.txt')
+        my_dir3 = os.path.join(my_dir, 'Maps', 'NRI_map.txt')
+        my_dir4 = os.path.join(my_dir, 'Maps', 'NRI_nodes.txt')
+        my_dir = os.path.join(my_dir, 'Specs', 'NRIActiveRoute2.txt')
+        #NRI ROUTE 1 DEFAULTS
+        self.default = np.array(['1', '5', '1.5,1.5,15', '-169,72,0', '-169,76,0'])
+        #NRI ROUTE 2 DEFAULTS
+        self.default = np.array(['1', '5', '1.5,1.5,15', '0.12,67.55,0', '0.12,62,0'])
+
 
         # 1 robots
         # self.default = np.array(
@@ -42,8 +47,8 @@ class formData:
         #     ['3', '5', '.25, .25 ,15,.25, .25 ,15,.25, .25 ,15', '1.8,-1.25,15,-.7,-.3,15,-.7,.77,15', '-1.8,-1.25,0,1.9,0.3,0'])
 
         # 5 robots(physical)
-        self.default = np.array(
-            ['5', '5', '.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15', '1.8,-1.25,15,-.7,-.3,15,-.7,.77,15,-.4,-.8,15,.4,-.8,15', '-1.8,-1.25,0,1.9,0.3,0,-1.35,-.8,0'])
+        # self.default = np.array(
+        #     ['5', '5', '.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15', '1.8,-1.25,15,-.7,-.3,15,-.7,.77,15,-.4,-.8,15,.4,-.8,15', '-1.8,-1.25,0,1.9,0.3,0,-1.35,-.8,0'])
 
         # 5 robots
         # self.default = np.array(
@@ -59,8 +64,7 @@ class formData:
         #     ['9', '5', '.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15',
         #      '1.75,-1.25,15,-.6,1,0,-.6,-.4,0,-.3,-1,0,.3,-1,0, 1.5, -.5,0,1.8,-.5,0,-1.5,-1,0,-1,-1,0', '-1.7,-2,0,1.75,.4,0,-1.5,.5,0'])
 
-        # self.default = np.array(
-        #     ['4', '5', '3,3,15,3,3,15,3,3,15,3,3,15', '4,22,0,20,23,0,36,25,0,5,22,0', '-169,76,0'])  # pre-filled values
+
         self.filename1 = my_dir  # Directory of Specification
         self.filename2 = my_dir2
         self.filename3 = my_dir3
@@ -481,7 +485,7 @@ class cmdInp:
 
 
 if __name__ == "__main__":
-    loadOnStart = 1
+    loadOnStart = 0
     if loadOnStart == 0:
         f = formData()
         f.makeForm()
@@ -504,7 +508,7 @@ if __name__ == "__main__":
             savemat(filePathM, dict)
     elif loadOnStart == 1:
         my_dir = os.path.dirname(os.path.abspath(__file__))
-        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'RALspec1.pkl')
+        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'NRIActiveYuhanEdit1.pkl')
         with open(pickle_file_path, 'rb') as input:
             f = pickle.load(input)
         #Get the inputs for the function to get robot commands. Inputs can be from gui or from a copied message
@@ -547,8 +551,8 @@ if __name__ == "__main__":
             plt.show()
             ax.plot(xwall, ywall, color="black")
 
-            xScale = 1
-            yScale = 1
+            xScale = 1.1217
+            yScale = .9143
             rect = []
             rect.append(patches.Rectangle((-1.66*xScale,1.2*yScale),.86*xScale,.3*yScale, linewidth=1, edgecolor='k', facecolor='black'))
             rect.append(
@@ -608,6 +612,8 @@ if __name__ == "__main__":
                     robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker=shapes[0], markersize=5, color=colors[0])
                 else:
                     robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker=shapes[int(np.floor((i+1)/numR))], markersize=5, color=colors[int(np.floor((i+1)/numR))])
+                # if i == 4 or i ==3:
+                #     robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker=shapes[int(np.floor((i+1)/numR))], markersize=5, color=colors[int(np.floor((i+1)/numR))])
 
             plt.draw()
             plt.pause(0.001)
@@ -639,23 +645,25 @@ if __name__ == "__main__":
         allTimes = []
         while runTime < 30:
             loopStart = time.time()
-            if runTime > 40:
+            if runTime > 1:
                 input[0] = 1
-                input[1] = 40
+                input[1] = 1
             if runTime > 3:
                 input[0] = 0
                 input[1] = 0
-            if runTime > 0:
+            if runTime > 2:
+                # circle1 = plt.Circle((1.25, .85), .1, color='r',fill=False)
+                # ax.add_patch(circle1)
                 input[2] = 1
-                input[3] = 0
+                input[3] = 2
             if runTime > 5:
                 input[2] = 0
                 input[3] = 0
             if f.N > 2:
-                if runTime > 18:
+                if runTime > 4:
                     input[4] = 1
-                    input[5] = 18
-                if runTime > 20:
+                    input[5] = 4
+                if runTime > 5:
                     input[4] = 0
                     input[5] = 0
 
@@ -681,10 +689,13 @@ if __name__ == "__main__":
                 posX[i] = posX[i] + vx[0][i] * loopTime
                 posY[i] = posY[i] + vy[0][i] * loopTime
                 posTheta[i] = posTheta[i] + vtheta[0][i] * loopTime
+                # if i == 4 or i == 3:
+                #     robots[str(i)] = ax.plot(posX[i],posY[i], marker=shapes[int(np.floor((i+1)/numR))], markersize=3, color=colors[int(np.floor((i+1)/numR))])
+
                 if i == 0:
-                    robots[str(i)] = ax.plot(posX[i],posY[i], marker='o', markersize=3, color=shapes[0])
+                    robots[str(i)] = ax.plot(posX[i],posY[i], marker=shapes[0], markersize=3, color=colors[0])
                 else:
-                    robots[str(i)] = ax.plot(posX[i],posY[i], marker='o', markersize=3, color=shapes[int(np.floor((i+1)/numR))])
+                    robots[str(i)] = ax.plot(posX[i],posY[i], marker=shapes[int(np.floor((i+1)/numR))], markersize=3, color=colors[int(np.floor((i+1)/numR))])
 
             # ax.plot(posPX[0], posPY[0], marker='o', markersize=3, color='black')
             # Hard Code pos of human and spills for experiment
