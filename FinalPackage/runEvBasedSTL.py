@@ -440,7 +440,7 @@ class cmdInp:
         # DEBUG MESSAGE MODE TOGGLE
         # Turn this value to "1" if you want to enter an example message from Unity/Matlab as an input. Otherwise, inputs
         # above will be used
-        debugMessage = 0
+        debugMessage = 1
 
         if not debugMessage:
             for i in range(int(f.M)):
@@ -459,7 +459,7 @@ class cmdInp:
 
         else:
             # Example message from Unity/Matlab
-            Mes = '4.0705 20.8021 0 19.4432 21 -1.0783e-11 36 25 0 4.8297 20.8423 0 4 22 0 20 23 0 36 25 0 5 22 0 -169 76 0 3.6 0 5 1 2.2 1 2.8 1 2 1 2 1 2 1 2 1 2.6 1 2.6 1 2.6 1 2.6'
+            Mes = '0.02000225 54.13 0 0.02 54.13 0 0.12 67.55 180 0 0 0 0 0 0 0'
             parsedMes = Mes.split()
             for i in range(int(f.M)):
                 self.posX = np.append(self.posX, float(parsedMes[3 * i]))
@@ -485,7 +485,7 @@ class cmdInp:
 
 
 if __name__ == "__main__":
-    loadOnStart = 0
+    loadOnStart = 1
     if loadOnStart == 0:
         f = formData()
         f.makeForm()
@@ -508,7 +508,7 @@ if __name__ == "__main__":
             savemat(filePathM, dict)
     elif loadOnStart == 1:
         my_dir = os.path.dirname(os.path.abspath(__file__))
-        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'NRIActiveYuhanEdit1.pkl')
+        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'NRIPassiveRoute1.pkl')
         with open(pickle_file_path, 'rb') as input:
             f = pickle.load(input)
         #Get the inputs for the function to get robot commands. Inputs can be from gui or from a copied message
@@ -517,7 +517,7 @@ if __name__ == "__main__":
 
     runOnce = 1
     if runOnce and f.ready:
-        debug = 0
+        debug = 1
         # Time how long it takes to get a command.
         if debug:
             t = time.time()
