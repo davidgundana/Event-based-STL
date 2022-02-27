@@ -341,7 +341,7 @@ class getAllCommands:
                     dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
                     dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
 
-                    if min(dist2closest1) > .04 and min(dist2closest2) > .04:
+                    if min(dist2closest1) > .2 and min(dist2closest2) > .2:
                         closestGoalInd = idx[i]
                         closestGoal = self.State.nodes[closestGoalInd]
                         break
@@ -368,7 +368,7 @@ class getAllCommands:
                     ptOfI2 = map[:, 2:4]
                     dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
                     dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-                    if min(dist2closest1) > .04 and min(dist2closest2) > .04:
+                    if min(dist2closest1) > .2 and min(dist2closest2) > .2:
                         closestStartInd.append(idx[i])
                         closestStartDist.append(np.sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) ** 2))
 

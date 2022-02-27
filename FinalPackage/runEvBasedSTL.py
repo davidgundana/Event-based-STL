@@ -459,7 +459,7 @@ class cmdInp:
 
         else:
             # Example message from Unity/Matlab
-            Mes = '0.02000225 54.13 0 0.02 54.13 0 0.12 67.55 180 0 0 0 0 0 0 0'
+            Mes = '-139.3526 -14.82436 157.7747 -157.64 63.38 0 -135.8176 -23.47556 1.400012 70.28 0 1 0 0 1 62.04'
             parsedMes = Mes.split()
             for i in range(int(f.M)):
                 self.posX = np.append(self.posX, float(parsedMes[3 * i]))
