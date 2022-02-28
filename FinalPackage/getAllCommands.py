@@ -368,7 +368,7 @@ class getAllCommands:
                     ptOfI2 = map[:, 2:4]
                     dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
                     dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-                    if min(dist2closest1) > .2 and min(dist2closest2) > .2:
+                    if min(dist2closest1) > .35 and min(dist2closest2) > .35:
                         closestStartInd.append(idx[i])
                         closestStartDist.append(np.sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) ** 2))
 

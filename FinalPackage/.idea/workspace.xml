@@ -2,11 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="4263b601-8e74-4f59-a8c9-9548d1cb286e" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/barrier.py" beforeDir="false" afterPath="$PROJECT_DIR$/barrier.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/errorLog.txt" beforeDir="false" afterPath="$PROJECT_DIR$/errorLog.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/getAllCommands.py" beforeDir="false" afterPath="$PROJECT_DIR$/getAllCommands.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/runEvBasedSTL.py" beforeDir="false" afterPath="$PROJECT_DIR$/runEvBasedSTL.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -31,8 +27,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/getAllCommands.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="253">
-              <caret line="370" column="74" selection-start-line="370" selection-start-column="74" selection-end-line="370" selection-end-column="74" />
+            <state relative-caret-position="1324">
+              <caret line="370" column="47" selection-start-line="370" selection-start-column="47" selection-end-line="370" selection-end-column="47" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -343,8 +339,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/getAllCommands.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="253">
-          <caret line="370" column="74" selection-start-line="370" selection-start-column="74" selection-end-line="370" selection-end-column="74" />
+        <state relative-caret-position="1324">
+          <caret line="370" column="47" selection-start-line="370" selection-start-column="47" selection-end-line="370" selection-end-column="47" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
