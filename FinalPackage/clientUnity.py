@@ -135,7 +135,7 @@ try:
                         #msg = "1 "
                         unt = 1
                         a = time.time()
-                        if pklNum == '2':
+                        if pklNum == 'a1' or pklNum == 'a2':
                             input = np.zeros((1, 2), dtype=float)
 
                             lineOfSight = 0
@@ -147,7 +147,7 @@ try:
                                 lineOfSight = 1
 
 
-                            if lineOfSight == 0 or dist > 15:
+                            if lineOfSight == 0 or dist > 40:
                                 input[0,0] = 1
                                 input[0,1] = currTime
 
