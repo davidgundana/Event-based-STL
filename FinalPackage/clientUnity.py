@@ -92,146 +92,150 @@ try:
                 full_msg = ''
 
             if len(full_msg)-Headersize == msglen:
-                new_msg = True
-
-                full_msg = full_msg[Headersize:]
-                parsedMes = full_msg.split()
-
-                for i in range(f.M):
-                    posX[0,i] = float(parsedMes[3*i])
-                    posY[0,i] = float(parsedMes[3*i+1])
-                    posTheta[0,i] = float(parsedMes[3*i+2])
-
-                firstMessage = 2*(f.M*3) + 3*n_people + 3 + 2*n_inputs
-
-                for i in range(f.M):
-                    posxinit[0,i] = float(parsedMes[3*i + 3*f.M])
-                    posyinit[0,i] = float(parsedMes[3*i + 1 + 3*f.M])
-                    posthetainit[0,i] = float(parsedMes[3*i+ 2 + 3*f.M])
-                for i in range(n_people):
-                    posXPerson[0,i] = float(parsedMes[3*i + 6*f.M])
-                    posYPerson[0,i] = float(parsedMes[3*i + 1 + 6*f.M])
-                    posThetaPerson[0,i] = float(parsedMes[3*i + 2 + 6*f.M])
-
-
-
-
-                currTime = float(parsedMes[6*f.M + 3*n_people])
-                startTime = float(parsedMes[6*f.M + 1 + 3*n_people])
-                currState = int(parsedMes[6*f.M + 2 + 3*n_people])
-
-                for i in range(n_inputs*2):
-                    try:
-                        input[0, i] = float(parsedMes[6 * f.M + 3 + i + 3 * n_people])
-                    except:
-                        pass
-                #print(input)
-
-                msg = ""
-                if firstMessage*2 != len(full_msg):
-                    print("DEBUG MESSAGE: " + full_msg)
-
-                    #msg = "1 "
-                    unt = 1
-                    a = time.time()
-                    if pklNum == '2':
-                        input = np.zeros((1, 2), dtype=float)
-
-                        lineOfSight = 0
-                        dist = np.sqrt((posX[0, 0] - posXPerson[0, 0]) ** 2 + (posY[0, 0] - posYPerson[0, 0]) ** 2)
-                        isect = activateProp.intersectPoint([],posX[0,0], posY[0,0], posXPerson[0,0], posYPerson[0,0],
-                                                            f.map[:, 0], f.map[:, 1], f.map[:, 2], f.map[:, 3])
-
-                        if not np.any(isect):
-                            lineOfSight = 1
-
-
-                        if lineOfSight == 0 or dist > 15:
-                            input[0,0] = 1
-                            input[0,1] = currTime
-
-                        # closeEnough = np.sqrt((posX[0][0] - posXPerson[0][0]) ** 2 + (posY[0][0] - posYPerson[0][0]) ** 2)
-                        # nomTemp, dist2NextPoint, distX, distY, distTotal, lastPoint = nom.getNom(f.State, np.array(
-                        #     [posX[0,0], posY[0,0]]), 2)
-                        # timeRem = distTotal / f.maxV[0]
-                        # if timeRem < currTime - 20:
-                        #     enoughTime = 0
-                        # else:
-                        #     enoughTime = 1
-
-                        # if closeEnough > 3 and input[0,0] == 0:
-                        #     input[0,0] = 1
-                        #     input[0,1] = currTime
-                        # if closeEnough < 3 and enoughTime and input[0,2] == 0:
-                        #     input[0,2] = 1
-                        #     input[0,3] = currTime
-                        # if not enoughTime and input[0,2] == 0:
-                        #     input[0,2] = 1
-                        #     print("..............................................................................")
-                        #     input[0,3] = currTime
-                        # if input[0,2] == 1:
-                        #     print('............................................................................')
-                    try:
-                        vx, vy, vtheta, currState, distTotal, newinput, unt = getCMD(f, posX[0], posY[0], posTheta[0],
-                                                                                     posxinit[0], posyinit[0],
-                                                                                     posthetainit[0], posXPerson[0],
-                                                                                     posYPerson[0], posThetaPerson[0],
-                                                                                     currTime, startTime, currState,
-                                                                                     input[0], unt)
-                        # print(posX[0], posY[0], posTheta[0],posxinit[0], posyinit[0],
-                        #                                                              posthetainit[0], posXPerson[0],
-                        #                                                              posYPerson[0], posThetaPerson[0],
-                        #                                                              currTime, startTime, currState,
-                        #                                                              input[0], unt)
-                    except Exception as exception:
-                        logging.basicConfig(level=logging.DEBUG, filename='errorLog.txt')
-                        theDate = datetime.datetime.now()
-                        logging.exception(theDate)
-                        #file1 = open("errorLog.txt", "a")
-                        #file1.write(str(theDate) + '\n')
-                        #file1.write(exception.GetType().FullName + '\n\n\n')
-                        print(exception)
-                        print('An exception occurred. Logging and stopping robot')
-                        vx= np.array([[0]])
-                        vy= np.array([[0]])
-                        vtheta= np.array([[0]])
-
-                    b = time.time() - a
-                    # print(str(b) + ' seconds since last update')
-
-                    if f.M == 1:
-                        msg = msg + str(vx[0][0]) + " "
-                        msg = msg + str(vy[0][0]) + " "
-                        msg = msg + str(vtheta[0][0]) + " "
-                    else:
-                        for i in range(f.M):
-                            msg = msg + str(vx[0, i]) + " "
-                            msg = msg + str(vy[0, i]) + " "
-                            msg = msg + str(vtheta[0, i]) + " "
-
-                    msg = msg + str(currState) + " " + "0"
-
-                    #for i in range(f.M):
-                        #msg = msg + str(distTotal[i]) + " "
-
-                    #for i in range(np.size(newinput)):
-                        #msg = msg + str(newinput[i]) + " "
-                    print(msg)
-                else:
-                    msg = "0 "
-                    for i in range(firstMessage):
-                        msg = msg + '0 '
-                full_msg = ''
                 try:
-                    msglen = len(msg)
-                    padL = ' '.ljust(sendSize-msglen-1)
+                    new_msg = True
+
+                    full_msg = full_msg[Headersize:]
+                    parsedMes = full_msg.split()
+
+                    for i in range(f.M):
+                        posX[0,i] = float(parsedMes[3*i])
+                        posY[0,i] = float(parsedMes[3*i+1])
+                        posTheta[0,i] = float(parsedMes[3*i+2])
+
+                    firstMessage = 2*(f.M*3) + 3*n_people + 3 + 2*n_inputs
+
+                    for i in range(f.M):
+                        posxinit[0,i] = float(parsedMes[3*i + 3*f.M])
+                        posyinit[0,i] = float(parsedMes[3*i + 1 + 3*f.M])
+                        posthetainit[0,i] = float(parsedMes[3*i+ 2 + 3*f.M])
+                    for i in range(n_people):
+                        posXPerson[0,i] = float(parsedMes[3*i + 6*f.M])
+                        posYPerson[0,i] = float(parsedMes[3*i + 1 + 6*f.M])
+                        posThetaPerson[0,i] = float(parsedMes[3*i + 2 + 6*f.M])
+
+
+
+
+                    currTime = float(parsedMes[6*f.M + 3*n_people])
+                    startTime = float(parsedMes[6*f.M + 1 + 3*n_people])
+                    currState = int(parsedMes[6*f.M + 2 + 3*n_people])
+
+                    for i in range(n_inputs*2):
+                        try:
+                            input[0, i] = float(parsedMes[6 * f.M + 3 + i + 3 * n_people])
+                        except:
+                            pass
+                    #print(input)
+
+                    msg = ""
+                    if firstMessage*2 != len(full_msg):
+                        print("DEBUG MESSAGE: " + full_msg)
+
+                        #msg = "1 "
+                        unt = 1
+                        a = time.time()
+                        if pklNum == '2':
+                            input = np.zeros((1, 2), dtype=float)
+
+                            lineOfSight = 0
+                            dist = np.sqrt((posX[0, 0] - posXPerson[0, 0]) ** 2 + (posY[0, 0] - posYPerson[0, 0]) ** 2)
+                            isect = activateProp.intersectPoint([],posX[0,0], posY[0,0], posXPerson[0,0], posYPerson[0,0],
+                                                                f.map[:, 0], f.map[:, 1], f.map[:, 2], f.map[:, 3])
+
+                            if not np.any(isect):
+                                lineOfSight = 1
+
+
+                            if lineOfSight == 0 or dist > 15:
+                                input[0,0] = 1
+                                input[0,1] = currTime
+
+                            # closeEnough = np.sqrt((posX[0][0] - posXPerson[0][0]) ** 2 + (posY[0][0] - posYPerson[0][0]) ** 2)
+                            # nomTemp, dist2NextPoint, distX, distY, distTotal, lastPoint = nom.getNom(f.State, np.array(
+                            #     [posX[0,0], posY[0,0]]), 2)
+                            # timeRem = distTotal / f.maxV[0]
+                            # if timeRem < currTime - 20:
+                            #     enoughTime = 0
+                            # else:
+                            #     enoughTime = 1
+
+                            # if closeEnough > 3 and input[0,0] == 0:
+                            #     input[0,0] = 1
+                            #     input[0,1] = currTime
+                            # if closeEnough < 3 and enoughTime and input[0,2] == 0:
+                            #     input[0,2] = 1
+                            #     input[0,3] = currTime
+                            # if not enoughTime and input[0,2] == 0:
+                            #     input[0,2] = 1
+                            #     print("..............................................................................")
+                            #     input[0,3] = currTime
+                            # if input[0,2] == 1:
+                            #     print('............................................................................')
+                        try:
+                            vx, vy, vtheta, currState, distTotal, newinput, unt = getCMD(f, posX[0], posY[0], posTheta[0],
+                                                                                         posxinit[0], posyinit[0],
+                                                                                         posthetainit[0], posXPerson[0],
+                                                                                         posYPerson[0], posThetaPerson[0],
+                                                                                         currTime, startTime, currState,
+                                                                                         input[0], unt)
+                            # print(posX[0], posY[0], posTheta[0],posxinit[0], posyinit[0],
+                            #                                                              posthetainit[0], posXPerson[0],
+                            #                                                              posYPerson[0], posThetaPerson[0],
+                            #                                                              currTime, startTime, currState,
+                            #                                                              input[0], unt)
+                        except Exception as exception:
+                            logging.basicConfig(level=logging.DEBUG, filename='errorLog.txt')
+                            theDate = datetime.datetime.now()
+                            logging.exception(theDate)
+                            #file1 = open("errorLog.txt", "a")
+                            #file1.write(str(theDate) + '\n')
+                            #file1.write(exception.GetType().FullName + '\n\n\n')
+                            print(exception)
+                            print('An exception occurred. Logging and stopping robot')
+                            vx= np.array([[0]])
+                            vy= np.array([[0]])
+                            vtheta= np.array([[0]])
+
+                        b = time.time() - a
+                        # print(str(b) + ' seconds since last update')
+
+                        if f.M == 1:
+                            msg = msg + str(vx[0][0]) + " "
+                            msg = msg + str(vy[0][0]) + " "
+                            msg = msg + str(vtheta[0][0]) + " "
+                        else:
+                            for i in range(f.M):
+                                msg = msg + str(vx[0, i]) + " "
+                                msg = msg + str(vy[0, i]) + " "
+                                msg = msg + str(vtheta[0, i]) + " "
+
+                        msg = msg + str(currState) + " " + "0"
+
+                        #for i in range(f.M):
+                            #msg = msg + str(distTotal[i]) + " "
+
+                        #for i in range(np.size(newinput)):
+                            #msg = msg + str(newinput[i]) + " "
+                        print(msg)
+                    else:
+                        msg = "0 "
+                        for i in range(firstMessage):
+                            msg = msg + '0 '
+                    full_msg = ''
+                    try:
+                        msglen = len(msg)
+                        padL = ' '.ljust(sendSize-msglen-1)
+                    except:
+                        padL = ' '.ljust(sendSize)
+
+                    msg = f"{msg} {padL}"
+
+                    s.sendall(bytes(msg, "utf-8"))
+                    full_msg = ''
                 except:
-                    padL = ' '.ljust(sendSize)
-
-                msg = f"{msg} {padL}"
-
-                s.sendall(bytes(msg, "utf-8"))
-                full_msg = ''
+                    full_msg = ''
+                    print('error')
 
 except Exception as exception:
     assert type(exception).__name__ == 'NameError'

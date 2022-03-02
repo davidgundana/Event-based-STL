@@ -81,7 +81,7 @@ def evBarrier(State, phi, t, Ts, a, b, inputTime, pos, posRef, posStart, hz,wall
             signF = -1 * signF
 
         # This only occurs once during initialization to evaluate the initial state
-        initBuffer = 50
+        initBuffer = 100
         if t == Ts:
             if numPos == 1:
                 initDist = abs(eval(funcOf) - p)
