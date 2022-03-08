@@ -36,10 +36,12 @@ class getAllCommands:
 
     def trackInputs(self,pos,posStart,posRef,t):
         props = self.props
-        input = self.State.input[::2].astype(int)
+        self.input = self.State.input[::2].astype(int)
+        self.input = self.input[:np.size(self.uncontrollableProp)]
+
         for i in range(np.size(self.uncontrollableProp)):
             propName = self.uncontrollableProp[i]
-            exec('props.' + propName + ' = ' + str(input[i]))
+            exec('props.' + propName + ' = ' + str(self.input[i]))
 
         count = 1
         for i in range(np.size(self.State.phi)):
@@ -64,6 +66,7 @@ class getAllCommands:
                     self.State.input[np.size(self.uncontrollableProp) * 2 + 2 * count - 2] = 0
 
                 count += 1
+        self.props = props
         # Need to reset specs
 
     def findConditions(self,activate):
@@ -103,14 +106,14 @@ class getAllCommands:
         #         indOfMatch = np.where(self.conditions[:,i] == 1)[0]
         #         self.conditions = np.delete(self.conditions,indOfMatch,axis=0)
 
-    def potentialConflicts(self,act,pos,posRef,ub,t,props_, wall_, tempInp_):
+    def potentialConflicts(self,act,pos,posRef,ub,t):
         # Lets check things that can be activated for each robot
         # These are the indexes of the inputs for the robot
         badConditions = []
         robustRef = []
         for i in range(np.size(self.conditions, 0)):
             try:
-                activate = activateProp.activateProp.activate(act, self.currState, props_, wall_, tempInp_, self.conditions[i], pos, posRef, t,1)
+                activate = activateProp.activateProp.activate(act, self.currState, self.conditions[i], pos, posRef, t,1)
                 if len(activate.robustness) > 0:
                     if any(x < 0 for x in activate.robustness):
                         badConditions.append(self.conditions[i])
@@ -143,6 +146,61 @@ class getAllCommands:
                 msg += '. To make robustness positive the task ' + self.State.phi[phiId].params + ' needs ' + str(timeNeeded) + ' more seconds to be completed'
             print(msg)
 
+    def evalProps(self,pos,posRef,t):
+        props = self.props
+        # Find the values of all parameters
+        if self.State.wall is not None and len(self.State.wall) != 0:
+            wall = self.State.wall
+            valuesOfControl = eval(','.join(self.State.parameters), {'__builtins__': None},
+                                    {'pos': pos, 'np': np, 'posRef': posRef, 'wall': wall})
+        else:
+            wall = []
+            valuesOfControl = eval(','.join(self.State.parameters), {'__builtins__': None},
+                                    {'pos': pos, 'np': np, 'posRef': posRef})
+        # change from true/false to 1/0
+        valuesOfControl = np.multiply(valuesOfControl,1)
+
+        # Assign all for the values to the propositions
+        for i in range(np.size(self.controllableProp)):
+            propName = self.controllableProp[i]
+            exec('props.' + propName + ' = ' + str(valuesOfControl[i]))
+
+        for i in range(len(self.State.phi)):
+            if self.State.phi[i].type == 'alw':
+                if t < self.State.phi[i].interval[0] + self.State.phi[i].inputTime or t > self.State.phi[i].interval[1] + self.State.phi[i].inputTime:
+                    propName = self.State.phi[i].prop_label
+                    exec('props.' + propName + ' = ' '1')
+                if t > self.State.phi[i].interval[0] + self.State.phi[i].inputTime and t < self.State.phi[i].interval[1] + self.State.phi[i].inputTime:
+                    propName = self.State.phi[i].prop_label
+                    if not eval('props.' + propName):
+                        print('SPECIFICATION VIOLATED: PARAMETER: {}, ACTUAL VALUE: {}'.format(self.State.phi[i].params, eval(self.State.phi[i].funcOf)))
+                        b = c31a
+            dir = re.findall('(?=\().+?(?=\*)', self.State.phi[i].funcOf)
+            dir[0] = re.findall('(?<=\().+(?<=\))', dir[0])[0]
+            dir[1] = re.findall('(?=\().+(?<=\))', dir[1])[0]
+            vals = [-eval(elem, {'__builtins__': None}, {'pos': pos, 'np': np, 'posRef': posRef, 'wall':wall}) for elem in dir]
+            self.State.phi[i].nom[1, 0:2] = vals
+            try:
+                if not isinstance(self.State.phi[i].point[0], float):
+                    self.State.phi[i].point = [eval(self.State.phi[i].point[0]), eval(self.State.phi[i].point[1])]
+            except:
+                pass
+            self.State.phi[i].currentTruth = eval('props.' + self.State.phi[i].prop_label, {'__builtins__': None},
+                                 {'props': props})
+
+            if self.State.phi[i].currentTruth:
+                nomR = np.zeros((1, 3), dtype=float)[0]
+                cost = eval(self.State.phi[i].funcOf)
+                signF = -self.State.phi[i].signFS[0]
+                self.State.phi[i].distFromSafe = cost + signF * self.State.phi[i].p
+            else:
+                nomR, cost = self.getNom(self.State.phi[i], pos, posRef)
+                self.State.phi[i].distFromSafe = cost
+
+            self.State.phi[i].nom[1, :] = nomR
+
+        self.props = props
+
     def Commands(self,currState,pos,posStart,posRef,t,Ts):
         # bounds for commands
         lb = -self.maxV
@@ -152,10 +210,12 @@ class getAllCommands:
         # also, if a specification has been satisfied, the input should be reset.
         self.trackInputs(pos, posStart, posRef,t)
 
+        # Evaluate the current state of the environment
+        self.evalProps(pos, posRef, t)
         #Find Propositions to activate based on the current state and transitiosn to an accepting state
-        act = activateProp.activateProp(self.State, currState, pos, posRef, t, self.maxV, self.M, 0, [])
-        props_,wall_,tempInp_ = activateProp.activateProp.prepActivate(act,pos,posRef)
-        activate = activateProp.activateProp.activate(act,currState,props_,wall_,tempInp_,[],pos,posRef,t,0)
+        act = activateProp.activateProp(self, 0, [],self.input,self.getNom)
+        activate = activateProp.activateProp.activate(act,currState,[],pos,posRef,t,0)
+
         print(activate.props2Activate)
         self.props2Activate = activate.props2Activate
         self.currState = activate.currState
@@ -166,7 +226,7 @@ class getAllCommands:
             self.findConditions(activate)
 
             # Check for potential conflicts if additional inputs are sensed
-            self.potentialConflicts(act,pos, posRef, ub, t,props_, wall_, tempInp_)
+            self.potentialConflicts(act,pos, posRef, ub, t)
         # create the new STL specification with the activated propositions
         ia = [list(self.State.controllableProp).index(s) for s in list(self.props2Activate)]
         phiIndex = [self.State.controllablePropOrder[s] for s in ia]
@@ -218,19 +278,6 @@ class getAllCommands:
                 if np.any(bPartialX):
                     nominals = np.empty((1, 3), dtype=float)
                     for j in range(np.size(phiRobot)):
-                        posRob = pos[phiRobot[j].nom[0, :].astype('int')]
-                        nomRob = phiRobot[j].nom[1, :]
-                        if eval(phiRobot[j].params) and phiRobot[j].type == 'ev':
-                            nomR = np.zeros((1,3),dtype=float)[0]
-                        elif phiRobot[j].type == 'alw':
-                            nomR = np.zeros((1,3),dtype=float)[0]
-                        else:
-                            try:
-                                nomR = self.getNom(self.State, posRob, nomRob, phiRobot[j].p)
-                            except:
-                                nomR = np.zeros((1, 3), dtype=float)[0]
-                        phiRobot[j].nom = phiRobot[j].nom.astype('float')
-                        phiRobot[j].nom[1, :] = nomR
                         if np.sum(abs(phiRobot[j].nom[1, :])) != 0:
                             velBound = ub[phiRobot[j].nom[0, 0:].astype(int)]
                             thisNom = phiRobot[j].nom
@@ -298,17 +345,16 @@ class getAllCommands:
                     # if nom[0][0] == 0 and t > 5:
         self.nom = nom
 
-
-    def getNom(self,State, pos, nom, p):
-        startPos = pos
-        goalPoint = pos + nom
-        closeEnough = .2
-
+    def getNom(self,phi, pos, nom):
+        a = time.time()
+        wallDistance = .05
+        maxStart = 8
+        startPos = pos[3*(phi.robotsInvolved[0]-1):3 * (phi.robotsInvolved[0] - 1) + 2]
+        goalPoint = phi.point
         map = self.State.map
         canReach = 0
-
         isect = self.intersectPoint(goalPoint[0], goalPoint[1], startPos[0], startPos[1],
-                                        map[:, 0], map[:, 1], map[:, 2], map[:, 3])
+                                            map[:, 0], map[:, 1], map[:, 2], map[:, 3])
 
         if not np.any(isect):
             pt1 = startPos
@@ -317,15 +363,13 @@ class getAllCommands:
             ptOfI2 = map[:, 2:4]
             dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
             dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-            if min(dist2closest1) > .1 and min(dist2closest2) > .1:
+            if min(dist2closest1) > wallDistance and min(dist2closest2) > wallDistance:
                 canReach = 1
 
         if canReach == 0:
             # Find the closest nodes to the goal
-            dist2p = []
-            for i in range(np.size(self.State.nodes, 0)):
-                dist2p.append(np.sqrt((goalPoint[0] - self.State.nodes[i, 0]) ** 2 +
-                                      (goalPoint[1] - self.State.nodes[i, 1]) ** 2))
+            dist2p = np.sqrt((goalPoint[0] - self.State.nodes[:, 0]) ** 2 +
+                                      (goalPoint[1] - self.State.nodes[:, 1]) ** 2)
             idx = np.argsort(dist2p)
 
             # Connect goal to first node it can. starting with closest
@@ -341,17 +385,13 @@ class getAllCommands:
                     dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
                     dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
 
-                    if min(dist2closest1) > .2 and min(dist2closest2) > .2:
+                    if min(dist2closest1) > wallDistance and min(dist2closest2) > wallDistance:
                         closestGoalInd = idx[i]
                         closestGoal = self.State.nodes[closestGoalInd]
                         break
 
-            # Find the closest nodes to the start
-            dist2p2 = []
-            for i in range(np.size(self.State.nodes, 0)):
-                dist2p2.append(
-                    np.sqrt((startPos[0] - self.State.nodes[i, 0]) ** 2 + (startPos[1] - self.State.nodes[i, 1]) ** 2))
-
+            # Find the closest nodes to the start\
+            dist2p2 = np.sqrt((startPos[0]-self.State.nodes[:, 0]) ** 2 + (startPos[1] - self.State.nodes[:, 1]) ** 2)
             idx = np.argsort(dist2p2)
 
             closestStartInd = []
@@ -368,21 +408,40 @@ class getAllCommands:
                     ptOfI2 = map[:, 2:4]
                     dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
                     dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-                    if min(dist2closest1) > .35 and min(dist2closest2) > .35:
+                    if min(dist2closest1) > wallDistance and min(dist2closest2) > wallDistance:
                         closestStartInd.append(idx[i])
                         closestStartDist.append(np.sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) ** 2))
+                        if len(closestStartInd) >= maxStart:
+                            break
 
             # Find Route
+            minDist = []
+            for i in range(np.size(closestStartInd,0)):
+                closStart = self.State.nodes[closestStartInd[i]]
+                costToStart = np.sqrt((closStart[0] - startPos[0]) ** 2 + (closStart[1] - startPos[1]) ** 2)
+                minDist.append(costToStart + self.State.nodeConnections[closestStartInd[i]][closestGoalInd][-1])
+
             nodesToGo = [self.State.nodeConnections[i][closestGoalInd][-1] for i in closestStartInd]
             distToGoals = np.asarray(nodesToGo) + np.asarray(closestStartDist)
             if np.size(distToGoals) != 0:
                 indOfNext = np.argmin(distToGoals)
-                #Check to see if this node wrongly itnersects
                 wayPoint = self.State.nodes[closestStartInd[indOfNext],:]
-                nom = wayPoint - pos[0:2]
+                nom = wayPoint - startPos
                 nom = np.hstack((nom,0))
+                closestStart = self.State.nodes[closestStartInd[indOfNext]]
+                costToStart = np.sqrt((closestStart[0] - startPos[0]) ** 2 + (closestStart[1] - startPos[1]) ** 2)
+                costToGoal = np.sqrt((goalPoint[0] - closestGoal[0]) ** 2 + (goalPoint[1] - closestGoal[1]) ** 2)
+                pathCost = self.State.nodeConnections[closestStartInd[indOfNext]][closestGoalInd][-1]
 
-        return nom  #, dist2NextPoint, distx, disty,distTotal, lastPoint
+                cost = costToStart + costToGoal + pathCost
+
+        else:
+            nom = goalPoint - startPos
+            nom = np.hstack((nom, 0))
+            cost = np.sqrt((goalPoint[0] - startPos[0]) ** 2 + (goalPoint[1] - startPos[1]) ** 2)
+
+        # print(time.time()-a)
+        return nom, cost
 
     def intersectPoint(self, x1, y1, x2, y2, x3, y3, x4, y4):
         denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)

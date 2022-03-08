@@ -7,8 +7,8 @@ load('RALnodes.txt')
 ratio = 1;
 xScale = 1.1217;
 yScale = 0.9143;
-xScale = 1;
-yScale = 1;
+% xScale = 1;
+% yScale = 1;
 
 RALmap(:,1) = RALmap(:,1)*xScale;
 RALmap(:,3) = RALmap(:,3)*xScale;
@@ -62,4 +62,4 @@ set(gcf,'MenuBar','none')
 set(gca,'XTick',[])
 set(gca,'YTick',[])
 % saveas(gcf,'workspace.png')
-%imwrite(getframe(gca).cdata, 'workspace.png')
+imwrite(getframe(gca).cdata, 'workspace.png')

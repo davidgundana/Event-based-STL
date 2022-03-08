@@ -7,9 +7,9 @@ import copy
 import time
 
 class activateProp:
-    def __init__(self, State, currState, pos, posRef, t, maxV, M, preF, conditions):
-        self.State = State #State of buchi
-        self.M = M #Number of robots
+    def __init__(self, State, preF, conditions,input_,getNom):
+        self.State = State.State #State of buchi
+        self.M = State.M #Number of robots
         self.props = State.props # Proposition values
         self.accepting_states = State.accepting_states # set of accepting states
         self.graph = State.graph # transitions from node to node
@@ -20,70 +20,46 @@ class activateProp:
         self.currState = [] # Pre-allocate current state
         self.locOfUncontrollable = [list(self.propositions).index(s) for s in list(self.uncontrollableProp)]
         self.input = []
-        self.maxV = maxV
+        self.maxV = State.maxV
         self.weights = [5,.75] #What is already true, what is false right now
         self.preF = preF
         self.conditions = conditions
         self.robustRef = []
         self.time2FinishRef = []
         self.distFromSafeRef = []
+        self.input = input_
+        self.getNom = getNom
         np.seterr(divide='ignore')
-        # self.activate(currState,pos,posRef,t)
 
-    def activate(self,currState,props,wall,input,conditions,pos,posRef,t,preF):
-        self.input = input
+    def activate(self,currState,conditions,pos,posRef,t,preF):
+        a = time.time()
+        props = self.props
+        wall = self.State.wall
         self.conditions = conditions
         self.preF = preF
 
-        if self.preF == 0:
-            # If we are not checking for pre-failure warnings we need the real value of the uncontrollable props
-            for i in range(np.size(self.uncontrollableProp)):
-                propName = self.uncontrollableProp[i]
-                exec('props.' + propName + ' = ' + str(self.input[i]))
-        else:
+        if self.preF == 1:
             for i in range(np.size(self.uncontrollableProp)):
                 propName = self.uncontrollableProp[i]
                 exec('props.' + propName + ' = ' + str(self.conditions[i]))
 
-        for i in range(len(self.State.phi)):
-            if self.State.phi[i].type == 'alw':
-                if t < self.State.phi[i].interval[0] + self.State.phi[i].inputTime or t > self.State.phi[i].interval[1] + self.State.phi[i].inputTime:
-                    propName = self.State.phi[i].prop_label
-                    exec('props.' + propName + ' = ' '1')
         #find the transition that is being made based on the conditions
         conditions = self.State.State[currState].cond
         evalCond = eval(','.join(conditions), {'__builtins__': None}, {'props': props})
         evalCond = np.multiply(evalCond,1)
 
         result = np.array(self.State.State[currState].result)
+        potentialNextStates = result[np.where(evalCond == 1)[0]]
 
-        if np.sum(evalCond) != 0:
-            potentialNextStates = result[np.where(evalCond == 1)[0]]
-        else:
-            for i in range(len(self.State.phi)):
-                if self.State.phi[i].type == 'alw':
-                    if t < self.State.phi[i].interval[0] or t > self.State.phi[i].interval[1]:
-                        propName = self.State.phi[i].prop_label[0]
-                        exec('props.' + propName + ' = ' '1')
-            evalCond = [eval(s, {'__builtins__': None}, {'props': props}) for s in conditions]
-            evalCond = np.multiply(evalCond, 1)
-
-            result = np.array(self.State.State[currState].result)
-            potentialNextStates = result[np.where(evalCond == 1)[0]]
         # First find all accepting states that can be reached given uncontrollable propositions
         reachableAcceptCycle = self.findAcceptingCycle()
 
         paths2Consider = []
-
         for i in range(np.size(potentialNextStates)):
             potState = potentialNextStates[i]
             for j in range(np.size(reachableAcceptCycle)):
                 allPaths = self.State.nRoutes[potState][reachableAcceptCycle[j]]
-                try:
-                    paths2Consider.append(allPaths)
-                except:
-                    pass
-
+                paths2Consider.append(allPaths)
 
         paths2Consider = [item for sublist in paths2Consider for item in sublist]
         # We only care about the first transition for now
@@ -98,7 +74,7 @@ class activateProp:
         paths2Consider = np.asarray(paths2Consider)
         paths2Consider = np.delete(paths2Consider,row2Del,0)
         paths2Consider = np.unique(paths2Consider, axis=0)
-        # paths2Consider = np.asarray([paths2Consider[0,:]])
+
         # Compute robustness for each path
         # first find all activated propositions for all transitions
         allTransitionsWithState = np.empty((1, len(self.controllableProp) + 1), dtype=int)
@@ -151,7 +127,11 @@ class activateProp:
         else:
             # Need to break the tie by computing robustness for those that are tied
             allTransMax = allTransitions[maxLoc, :]
+            # a = time.time()
             trans2Make = self.pickTransition(allTransMax, pos, props, t, wall, posRef)
+            # print(time.time() - a)
+            # if t > 0:
+            #     print('here')
 
         stateLoc = np.where((allTransitions == trans2Make).all(axis=1))[0][0]
 
@@ -161,17 +141,16 @@ class activateProp:
         self.props2Activate = [self.controllableProp[element] for element in propsLoc]
 
         return self
+
     def findAcceptingCycle(self):
         reachableAccepting = []
         for j in range(np.size(self.State.acceptingWithCycle)):
             transToAccept = self.State.acceptingWithCycle[j]
             comeFrom = np.where(self.graph[:,transToAccept] == 1)[0]
-            # allConds = np.zeros((1,np.size(self.State.State[0].condCNF[0][0])),dtype = int)
             for k in range(np.size(comeFrom)):
                 stateFrom = comeFrom[k]
                 idOfResult = np.where(self.State.State[stateFrom].result == transToAccept)[0][0]
                 condOfI = np.asarray(self.State.State[stateFrom].condCNF[idOfResult])
-                # allConds = np.append(allConds,condOfI, axis = 0)
 
                 # New stuff
                 condOfI2 = condOfI[:,self.locOfUncontrollable]
@@ -189,154 +168,6 @@ class activateProp:
 
         return reachableAccepting
 
-    def computeRobustness(self,propositions,props,pos,t,wall):
-        robustness = []
-        for i in range(np.size(propositions)):
-            propOfI = self.controllableProp[propositions[i]]
-            ia = list(self.State.controllableProp).index(propOfI)
-            phiIndex = self.State.controllablePropOrder[ia]
-            phi = self.State.phi[phiIndex]
-
-            #compute truth value of predicate
-            isTrue = eval('props.'+propOfI)
-
-            #if isTrue = 0 the predicate is false and we compute the estimated time to completion
-            if isTrue == 1:
-                #Compute how far from leving the safe set
-                try:
-                    distFromSafe = eval(phi.funcOf)
-                except:
-                    distFromSafe = eval(phi.funcOf[0][0])
-                signF = -phi.signFS[0][0]
-
-                totalDist = distFromSafe + signF*phi.p[0][0]
-                robustness.append(self.weights[0] * totalDist)
-            else:
-                distFromSafe = self.getDistance(phi,pos, posRef)
-                signF = phi.signFS[0][0]
-                totalDist = distFromSafe + signF*phi.p[0][0]
-                robot = phi.robotsInvolved[0]
-                maxV = np.sqrt(self.maxV[3*robot-3]**2 +  self.maxV[3*robot-2]**2)
-                maxV = self.maxV[3*robot-3]
-                time2Finish = totalDist/maxV
-                timeRemaining = (phi.interval[1] + phi.inputTime) - t
-                timeBuffer = timeRemaining - time2Finish
-                robustness.append(self.weights[1] * timeBuffer)
-
-        return np.asarray(robustness)
-
-    def getDistance(self,phi,pos,posRef):
-        startPos = pos[3*(phi.robotsInvolved[0]-1):3 * (phi.robotsInvolved[0] - 1) + 2]
-        goalPoint = copy.deepcopy(startPos)
-        if not isinstance(phi.point[0],float):
-            numPos = np.size(re.findall('pos', phi.funcOf))
-            if numPos == 1:
-                indSame = int(re.search('(?<=\[)\d+(?=\])', phi.funcOf)[0])
-                indSame = indSame % 3
-                goalPoint[indSame] = phi.p
-            else:
-                dir = re.findall('(?=\().+?(?=\*)', phi.funcOf)
-
-                dir[0] = re.findall('(?<=\().+(?<=\))', dir[0])[0]
-                dir[1] = re.findall('(?=\().+(?<=\))', dir[1])[0]
-                directionSplit = np.empty([1, np.size(dir)], dtype=object)
-                directionSplit[0, 0] = re.split('[\+,\-]', dir[0])[1]
-                directionSplit[0, 0] = '(' + directionSplit[0, 0]
-                directionSplit[0, 1] = re.split('[\+,\-]', dir[1])[1]
-                directionSplit[0, 1] = '(' + directionSplit[0, 1]
-                vals = [-eval(elem, {'__builtins__': None}, {'pos': pos, 'np': np, 'posRef': posRef}) for elem in dir]
-                goalPoint = pos[phi.nom[0,0:2].astype('int')] + vals
-        else:
-            goalPoint = phi.point
-
-        map = self.State.map
-        canReach = 0
-
-        isect = self.intersectPoint(goalPoint[0], goalPoint[1], startPos[0], startPos[1],
-                                        map[:, 0], map[:, 1], map[:, 2], map[:, 3])
-
-
-        if not np.any(isect):
-            canReach = 1
-            cost = np.sqrt((goalPoint[0] - startPos[0]) ** 2 + (goalPoint[1] - startPos[1]) ** 2)
-
-        if canReach == 0:
-            # Find the closest nodes to the goal
-            dist2p = []
-            for i in range(np.size(self.State.nodes, 0)):
-                dist2p.append(np.sqrt((goalPoint[0] - self.State.nodes[i, 0]) ** 2 +
-                                      (goalPoint[1] - self.State.nodes[i, 1]) ** 2))
-            idx = np.argsort(dist2p)
-
-            # Connect goal to first node it can. starting with closest
-            for i in range(np.size(idx)):
-                isect = self.intersectPoint(goalPoint[0], goalPoint[1], self.State.nodes[idx[i], 0],
-                                                    self.State.nodes[idx[i], 1], map[:, 0], map[:, 1], map[:, 2],map[:, 3])
-
-                if not np.any(isect):
-                    closestGoalInd = idx[i]
-                    closestGoal = self.State.nodes[closestGoalInd]
-                    break
-
-            # Find the closest nodes to the start
-            dist2p2 = []
-            for i in range(np.size(self.State.nodes, 0)):
-                dist2p2.append(
-                    np.sqrt((startPos[0] - self.State.nodes[i, 0]) ** 2 + (startPos[1] - self.State.nodes[i, 1]) ** 2))
-
-            idx = np.argsort(dist2p2)
-
-            closestStartInd = []
-            for i in range(np.size(idx)):
-                isect = self.intersectPoint(startPos[0], startPos[1], self.State.nodes[idx[i], 0],
-                                                    self.State.nodes[idx[i], 1], map[:, 0], map[:, 1], map[:, 2],
-                                                    map[:, 3])
-                if not np.any(isect):
-                    #Check to see how far the segments are. A buffer may be needed
-                    pt1 = startPos
-                    pt2 = self.State.nodes[idx[i], 0:2]
-                    if not (pt1==pt2).all():
-                        ptOfI1 = map[:, 0:2]
-                        ptOfI2 = map[:, 2:4]
-                        dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
-                        dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-                        if min(dist2closest1) > .03 or min(dist2closest2) > .03:
-                            closestStartInd.append(idx[i])
-                            if len(closestStartInd) >= 8:
-                                break
-            if len(closestStartInd) > 1:
-                minDist = []
-                for i in range(np.size(closestStartInd,0)):
-                    closStart = self.State.nodes[closestStartInd[i]]
-                    costToStart = np.sqrt((closStart[0] - startPos[0]) ** 2 + (closStart[1] - startPos[1]) ** 2)
-                    try:
-                        minDist.append(costToStart + self.State.nodeConnections[closestStartInd[i]][closestGoalInd][-1])
-                    except:
-                        print('here')
-                closestStartInd = closestStartInd[np.argmin(minDist)]
-                closestStart = self.State.nodes[closestStartInd]
-            else:
-                closestStartInd = closestStartInd[0]
-                closestStart = self.State.nodes[closestStartInd]
-
-            # If no closest start or goal can be found the point can not be reached given map and nodes
-            if 'closestStart' in locals() or 'closestGoal' in locals():
-                # compute total cost
-                # Cost to get to start
-                try:
-                    costToStart = np.sqrt((closestStart[0] - startPos[0]) ** 2 + (closestStart[1] - startPos[1]) ** 2)
-                    costToGoal = np.sqrt((goalPoint[0] - closestGoal[0]) ** 2 + (goalPoint[1] - closestGoal[1]) ** 2)
-                    pathCost = self.State.nodeConnections[closestStartInd][closestGoalInd][-1]
-
-                    cost = costToStart + costToGoal + pathCost
-                except:
-                    print('here')
-            else:
-                print('No path to goal given map and nodes')
-                cost = 1000000000
-
-        return cost
-
     def pickTransition(self,allTransMax,pos,props,t,wall,posRef):
         allRobust = []
         allRobustId = []
@@ -348,11 +179,6 @@ class activateProp:
             robustRef = self.robustRef
             time2FinishRef = self.time2FinishRef
             distFromSafeRef = self.distFromSafeRef
-        for i in range(np.size(self.State.phi)):
-            self.State.phi[i].currentTruth = eval('props.' + self.State.phi[i].prop_label, {'__builtins__': None},
-                                 {'props': props})
-            if not self.State.phi[i].currentTruth:
-                self.State.phi[i].distFromSafe = self.getDistance(self.State.phi[i], pos, posRef)
 
         for i in range(np.size(allTransMax,0)):
             indOfActive = np.where(allTransMax[i,:]==1)[0]
@@ -363,23 +189,20 @@ class activateProp:
 
             satisfiedPhi = [phi[s] for s in range(np.size(phi)) if phi[s].currentTruth]
             unsatisfiedPhi = [phi[s] for s in range(np.size(phi)) if not phi[s].currentTruth]
-
             for j in range(np.size(satisfiedPhi)):
                 if robustRef[satisfiedPhi[j].id] is None:
-                    distFromSafe = eval(satisfiedPhi[j].funcOf)
-                    signF = -satisfiedPhi[j].signFS[0]
-                    totalDist = distFromSafe + signF * satisfiedPhi[j].p
-                    robtemp = self.weights[0] * totalDist
+                    robtemp = self.weights[0] * satisfiedPhi[j].distFromSafe
                     robustRef[satisfiedPhi[j].id] = robtemp
                     robustness.append(robtemp)
                     ids.append(satisfiedPhi[j].id)
                 else:
                     robustness.append(robustRef[satisfiedPhi[j].id])
                     ids.append(satisfiedPhi[j].id)
+
             for ii in range(1,self.M+1):
                 phiRobot = []
                 for j in range(np.size(unsatisfiedPhi)):
-                    if np.where(unsatisfiedPhi[j].robotsInvolved==ii)[0].size != 0:
+                    if ii in unsatisfiedPhi[j].robotsInvolved:
                         phiRobot.append(unsatisfiedPhi[j])
                         ids.append(unsatisfiedPhi[j].id)
                 if len(phiRobot) == 1:
@@ -416,10 +239,6 @@ class activateProp:
                                 timeLeft = (phiRobot[j].interval[1] + phiRobot[j].inputTime)
                             else:
                                 timeLeft = (phiRobot[j].interval[1] + phiRobot[j].inputTime)- t
-                        # if isinstance(phiRobot[j].inputTime, float):
-                        #     timeLeft = phiRobot[j].interval[1] + phiRobot[j].inputTime
-                        # else:
-                        #     timeLeft = phiRobot[j].interval[1] + t
                         times.append(timeLeft)
 
                     isTie = np.all(times == times[0])
@@ -482,7 +301,8 @@ class activateProp:
                             else:
                                 posTemp = np.array([posTemp[0],posTemp[1]])
 
-                            distFromSafe2 = distFromSafe + self.getDistance(phiRobot[orderToComplete[j]], posTemp, posRef)
+                            nom, costTemp = self.getNom(phiRobot[orderToComplete[j]], posTemp, posRef)
+                            distFromSafe2 = distFromSafe + costTemp
                             signF = phiRobot[orderToComplete[j]].signFS[0]
                             totalDist = distFromSafe2 + signF * phiRobot[j].p
                             robot = phiRobot[orderToComplete[j]].robotsInvolved[0]
@@ -632,28 +452,3 @@ class activateProp:
             pass
 
         return dist
-
-    def prepActivate(self,pos,posRef):
-        props = self.props
-        # Find the values of all parameters
-        if self.State.wall is not None and len(self.State.wall) != 0:
-            wall = self.State.wall
-            valuesOfControl = eval(','.join(self.State.parameters), {'__builtins__': None},
-                                    {'pos': pos, 'np': np, 'posRef': posRef, 'wall': wall})
-
-        else:
-            wall = []
-            valuesOfControl = eval(','.join(self.State.parameters), {'__builtins__': None},
-                                    {'pos': pos, 'np': np, 'posRef': posRef})
-        # change from true/false to 1/0
-        valuesOfControl = np.multiply(valuesOfControl,1)
-
-        input = self.State.input[::2].astype(int)
-        input = input[:np.size(self.uncontrollableProp)]
-
-        # Assign all for the values to the propositions
-        for i in range(np.size(self.controllableProp)):
-            propName = self.controllableProp[i]
-            exec('props.' + propName + ' = ' + str(valuesOfControl[i]))
-
-        return props, wall, input
