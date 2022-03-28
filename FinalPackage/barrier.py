@@ -81,7 +81,7 @@ def evBarrier(State, phi, t, Ts, a, b, inputTime, pos, posRef, posStart, hz,wall
             signF = -1 * signF
 
         # This only occurs once during initialization to evaluate the initial state
-        initBuffer = 100
+        initBuffer = 3
         if t == Ts:
             if numPos == 1:
                 initDist = abs(eval(funcOf) - p)
@@ -128,12 +128,16 @@ def evBarrier(State, phi, t, Ts, a, b, inputTime, pos, posRef, posStart, hz,wall
 def alBarrier(State, phi, t, Ts, a, b, pos, posRef, tmax, unt,wall,preF):
     p = phi.p
     funcOf = phi.funcOf
+    if 'wall' in phi.funcOf:
+        tempPos = pos[3*(phi.robotsInvolved[0]-1):3 * (phi.robotsInvolved[0] - 1) + 2]
+        wallTemp = lineseg_dists(tempPos, State.map[:,0:2], State.map[:,2:])
+        wall[2*(phi.robotsInvolved[0]-1):2 * (phi.robotsInvolved[0] - 1) + 2] = wallTemp
     # if theres only one bound for the safe-set
     if np.size(np.where(phi.signFS[0] != 0)) == 1:
         signF = phi.signFS[0]
 
         # compute the barrier function
-        bxt_i = signF * (-p + eval(funcOf))
+        bxt_i = 1.3 * signF * (-p + eval(funcOf))
 
         # This is optional. For speed, if the robot is "far enough" from violation, we will ignore this. Can
         # be commented out
@@ -145,7 +149,8 @@ def alBarrier(State, phi, t, Ts, a, b, pos, posRef, tmax, unt,wall,preF):
                 if eval(funcOf) > (signF*1+p):
                     bxt_i = 0
             else:
-                if eval(funcOf) > (signF * 5*p):
+                if eval(funcOf) > (signF * 8*p):
+
                     bxt_i = 0
                 else:
                     bxt_i = bxt_i
@@ -192,33 +197,6 @@ def feedbackLin(vx, vy, theta, epsilon):
 
     return fVelAngVel
 
-def findPoint(map,pos):
-    wallPoints = np.empty((1,2))
-    wallDistances = np.empty((1,1))
-    mapNew = np.multiply((map[:, 0:2] - pos), (map[:, 0:2] - pos))
-    mapAdd = np.sqrt(mapNew[:, 0] + mapNew[:, 1])
-    maxInd = np.size(mapAdd)-1
-    if maxInd > 20:
-        maxInd = 20
-    idx = np.argpartition(mapAdd, maxInd)
-    idx = idx[:maxInd]
-    map2Consider = map[idx]
-
-    for k in range(np.size(map2Consider, 0)):
-        p1 = map2Consider[k, 0:2]
-        p2 = map2Consider[k, 2:4]
-        wall, dist2wall = distWall(p1,p2,pos)
-        wallPoints = np.vstack((wallPoints,wall))
-        wallDistances = np.vstack((wallDistances,dist2wall))
-
-    wallPoints = wallPoints[1:,:]
-    wallDistances = wallDistances[1:,:]
-
-    minDist = np.argmin(wallDistances)
-    wall = wallPoints[minDist]
-
-    return wall
-
 def distWall(p1,p2,pt):
     dx = p2[0] - p1[0]
     dy = p2[1] - p1[1]
@@ -247,3 +225,40 @@ def distWall(p1,p2,pt):
         dist = np.sqrt(dx ** 2 + dy ** 2)
 
     return closestP, dist
+
+def lineseg_dists(p, a, b):
+    """Cartesian distance from point to line segment
+
+    https://stackoverflow.com/questions/27161533
+    /find-the-shortest-distance-between-a-point-and-line-segments-not-line
+
+    Edited to support arguments as series, from:
+    https://stackoverflow.com/a/54442561/11208892
+
+    Args:
+        - p: np.array of single point, shape (2,) or 2D array, shape (x, 2)
+        - a: np.array of shape (x, 2)
+        - b: np.array of shape (x, 2)
+    """
+    # normalized tangent vectors
+    d_ba = b - a
+    d = np.divide(d_ba, (np.hypot(d_ba[:, 0], d_ba[:, 1])
+                           .reshape(-1, 1)))
+
+    # signed parallel distance components
+    # rowwise dot products of 2D vectors
+    s = np.multiply(a - p, d).sum(axis=1)
+    t = np.multiply(p - b, d).sum(axis=1)
+
+    # clamped parallel distance
+    h = np.maximum.reduce([s, t, np.zeros(len(s))])
+
+    # perpendicular distance component
+    # rowwise cross products of 2D vectors
+    d_pa = p - a
+    c = d_pa[:, 0] * d[:, 1] - d_pa[:, 1] * d[:, 0]
+
+    allDists = np.hypot(h, c)
+    closestWall = np.argmin(allDists)
+    closestP, dist = distWall(a[closestWall],b[closestWall],p)
+    return closestP

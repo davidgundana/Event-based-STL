@@ -111,15 +111,35 @@ class getAllCommands:
         # These are the indexes of the inputs for the robot
         badConditions = []
         robustRef = []
-        for i in range(np.size(self.conditions, 0)):
+        while np.size(self.conditions,0) > 0:
             try:
-                activate = activateProp.activateProp.activate(act, self.currState, self.conditions[i], pos, posRef, t,1)
+                activate = activateProp.activateProp.activate(act, self.currState, self.conditions[0], pos, posRef, t,1)
                 if len(activate.robustness) > 0:
                     if any(x < 0 for x in activate.robustness):
-                        badConditions.append(self.conditions[i])
+                        badConditions.append(self.conditions[0])
                         robustRef.append(activate.robustness)
-            except:
+                        actInd = np.where(self.conditions[0]==1)[0]
+                        indToDel = []
+                        for i in range(np.size(actInd)):
+                            indToDel.extend(np.where(self.conditions[:, actInd[i]] == 1)[0].tolist())
+                        indToDel = np.unique(indToDel)
+                        if np.size(self.conditions, 0) > 0:
+                            self.conditions = np.delete(self.conditions, indToDel, 0)
+                if np.size(self.conditions, 0) > 0:
+                    self.conditions = np.delete(self.conditions,0,0)
+            except Exception as e:
+                if np.size(self.conditions,0) > 0:
+                    self.conditions = np.delete(self.conditions,0,0)
                 pass
+        # for i in range(np.size(self.conditions, 0)):
+        #     try:
+        #         activate = activateProp.activateProp.activate(act, self.currState, self.conditions[i], pos, posRef, t,1)
+        #         if len(activate.robustness) > 0:
+        #             if any(x < 0 for x in activate.robustness):
+        #                 badConditions.append(self.conditions[i])
+        #                 robustRef.append(activate.robustness)
+        #     except:
+        #         pass
         # the badConditions variable shows which combinations of inputs result in a negative robustness score
         # for a proposition
         currInput = self.State.input[::2].astype(int)
@@ -167,14 +187,18 @@ class getAllCommands:
 
         for i in range(len(self.State.phi)):
             if self.State.phi[i].type == 'alw':
-                if t < self.State.phi[i].interval[0] + self.State.phi[i].inputTime or t > self.State.phi[i].interval[1] + self.State.phi[i].inputTime:
+                if isinstance(self.State.phi[i].inputTime,float):
+                    inputTime = self.State.phi[i].inputTime
+                else:
+                    inputTime = 0
+                if t < self.State.phi[i].interval[0] + inputTime or t > self.State.phi[i].interval[1] + inputTime:
                     propName = self.State.phi[i].prop_label
                     exec('props.' + propName + ' = ' '1')
-                if t > self.State.phi[i].interval[0] + self.State.phi[i].inputTime and t < self.State.phi[i].interval[1] + self.State.phi[i].inputTime:
+                if t > self.State.phi[i].interval[0] +inputTime and t < self.State.phi[i].interval[1] + inputTime:
                     propName = self.State.phi[i].prop_label
                     if not eval('props.' + propName):
-                        print('SPECIFICATION VIOLATED: PARAMETER: {}, ACTUAL VALUE: {}'.format(self.State.phi[i].params, eval(self.State.phi[i].funcOf)))
-                        b = c31a
+                        raise Exception('SPECIFICATION VIOLATED: PARAMETER: {}, ACTUAL VALUE: {}, PROP LABEL: {}'
+                                        .format(self.State.phi[i].params, eval(self.State.phi[i].funcOf),self.State.phi[i].prop_label))
             dir = re.findall('(?=\().+?(?=\*)', self.State.phi[i].funcOf)
             dir[0] = re.findall('(?<=\().+(?<=\))', dir[0])[0]
             dir[1] = re.findall('(?=\().+(?<=\))', dir[1])[0]
@@ -195,7 +219,10 @@ class getAllCommands:
                 self.State.phi[i].distFromSafe = cost + signF * self.State.phi[i].p
             else:
                 nomR, cost = self.getNom(self.State.phi[i], pos, posRef)
-                self.State.phi[i].distFromSafe = cost
+                signF = self.State.phi[i].signFS[0]
+                self.State.phi[i].distFromSafe = cost + signF * self.State.phi[i].p
+                rob = self.State.phi[i].robotsInvolved[0]
+                self.State.phi[i].time2Finish = cost / self.maxV[3 * rob - 3]
 
             self.State.phi[i].nom[1, :] = nomR
 
@@ -220,7 +247,7 @@ class getAllCommands:
         self.props2Activate = activate.props2Activate
         self.currState = activate.currState
         # Toggle to turn on/off pre failure warnings
-        preFailure = 0
+        preFailure = 1
         if preFailure:
             # this is for a pre-failure warning. We want to see what happens if things change with the inputs
             self.findConditions(activate)
@@ -333,6 +360,7 @@ class getAllCommands:
 
                     qp = quadprog(H,f,Anew, b, x0, lbI, ubI)
                     nomInd = qp.result.x
+
                     if not qp.result.success:
                         print('Specification violated')
                         nom[0][3 * i - 3] = 0
@@ -342,84 +370,70 @@ class getAllCommands:
                         nom[0][3 * i - 3] = nomInd[0]
                         nom[0][3 * i - 2] = nomInd[1]
                         nom[0][3 * i - 1] = nomInd[2]
-                    # if nom[0][0] == 0 and t > 5:
         self.nom = nom
 
     def getNom(self,phi, pos, nom):
-        a = time.time()
+        avoidWallsInPath = 1
         wallDistance = .05
-        maxStart = 8
         startPos = pos[3*(phi.robotsInvolved[0]-1):3 * (phi.robotsInvolved[0] - 1) + 2]
-        goalPoint = phi.point
-        map = self.State.map
         canReach = 0
-        isect = self.intersectPoint(goalPoint[0], goalPoint[1], startPos[0], startPos[1],
-                                            map[:, 0], map[:, 1], map[:, 2], map[:, 3])
+        isect = self.intersectPoint(phi.point[0], phi.point[1], startPos[0], startPos[1],
+                                self.State.map[:, 0], self.State.map[:, 1], self.State.map[:, 2], self.State.map[:, 3])
 
         if not np.any(isect):
-            pt1 = startPos
-            pt2 = goalPoint
-            ptOfI1 = map[:, 0:2]
-            ptOfI2 = map[:, 2:4]
-            dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
-            dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-            if min(dist2closest1) > wallDistance and min(dist2closest2) > wallDistance:
+            dist2closest1 = self.distWall(startPos, phi.point, np.vstack((self.State.map[:, 0:2],self.State.map[:, 2:4])))
+            if min(dist2closest1) > wallDistance:
                 canReach = 1
 
         if canReach == 0:
             # Find the closest nodes to the goal
-            dist2p = np.sqrt((goalPoint[0] - self.State.nodes[:, 0]) ** 2 +
-                                      (goalPoint[1] - self.State.nodes[:, 1]) ** 2)
+            dist2p = np.sqrt((phi.point[0] - self.State.nodes[:, 0]) ** 2 +
+                                      (phi.point[1] - self.State.nodes[:, 1]) ** 2)
             idx = np.argsort(dist2p)
 
             # Connect goal to first node it can. starting with closest
-            for i in range(np.size(idx)):
-                isect = self.intersectPoint(goalPoint[0], goalPoint[1], self.State.nodes[idx[i], 0],
-                                                    self.State.nodes[idx[i], 1], map[:, 0], map[:, 1], map[:, 2],map[:, 3])
+            isect = self.intersectPointVec(phi.point[0], phi.point[1], self.State.nodes[idx, 0],self.State.nodes[idx, 1],
+                                        self.State.map[:, 0], self.State.map[:, 1], self.State.map[:, 2],self.State.map[:, 3])
+            closestGoalInd = idx[isect]
 
-                if not np.any(isect):
-                    pt1 = goalPoint
-                    pt2 = self.State.nodes[idx[i], 0:2]
-                    ptOfI1 = map[:, 0:2]
-                    ptOfI2 = map[:, 2:4]
-                    dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
-                    dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
+            if avoidWallsInPath:
+                iToDel = []
+                for i in range(np.size(closestGoalInd)):
+                    dist2Walls = self.distWall(phi.point, self.State.nodes[closestGoalInd[i],:],
+                                               np.vstack((self.State.map[:,0:2],self.State.map[:,2:4])))
+                    if min(dist2Walls) < wallDistance:
+                        iToDel.append(i)
+                closestGoalInd = np.delete(closestGoalInd,iToDel)
 
-                    if min(dist2closest1) > wallDistance and min(dist2closest2) > wallDistance:
-                        closestGoalInd = idx[i]
-                        closestGoal = self.State.nodes[closestGoalInd]
-                        break
+            closestGoalInd = closestGoalInd[0]
+            closestGoal = self.State.nodes[closestGoalInd]
 
-            # Find the closest nodes to the start\
+            # Find the closest nodes to the start
             dist2p2 = np.sqrt((startPos[0]-self.State.nodes[:, 0]) ** 2 + (startPos[1] - self.State.nodes[:, 1]) ** 2)
             idx = np.argsort(dist2p2)
 
-            closestStartInd = []
-            closestStartDist = []
-            for i in range(np.size(idx)):
-                isect = self.intersectPoint(startPos[0], startPos[1], self.State.nodes[idx[i], 0],
-                                                    self.State.nodes[idx[i], 1], map[:, 0], map[:, 1], map[:, 2],
-                                                    map[:, 3])
-                if not np.any(isect):
-                    #Check to see how far the segments are. A buffer may be needed
-                    pt1 = startPos
-                    pt2 = self.State.nodes[idx[i], 0:2]
-                    ptOfI1 = map[:, 0:2]
-                    ptOfI2 = map[:, 2:4]
-                    dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
-                    dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-                    if min(dist2closest1) > wallDistance and min(dist2closest2) > wallDistance:
-                        closestStartInd.append(idx[i])
-                        closestStartDist.append(np.sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) ** 2))
-                        if len(closestStartInd) >= maxStart:
-                            break
+            isect = self.intersectPointVec(startPos[0], startPos[1], self.State.nodes[idx, 0],self.State.nodes[idx, 1],
+                                self.State.map[:, 0], self.State.map[:, 1], self.State.map[:, 2],self.State.map[:, 3])
+            closestStartInd = idx[isect]
+            closestStartDist = np.sqrt((startPos[0] - self.State.nodes[closestStartInd,0]) ** 2 +
+                                       (startPos[1] - self.State.nodes[closestStartInd,1]) ** 2)
+
+            if avoidWallsInPath:
+                iToDel = []
+                for i in range(np.size(closestStartInd)):
+                    dist2Walls = self.distWall(startPos, self.State.nodes[closestStartInd[i],:],
+                                               np.vstack((self.State.map[:,0:2],self.State.map[:,2:4])))
+                    if min(dist2Walls) < wallDistance:
+                        iToDel.append(i)
+                closestStartInd = np.delete(closestStartInd,iToDel)
+                closestStartDist = np.delete(closestStartDist,iToDel)
 
             # Find Route
-            minDist = []
-            for i in range(np.size(closestStartInd,0)):
-                closStart = self.State.nodes[closestStartInd[i]]
-                costToStart = np.sqrt((closStart[0] - startPos[0]) ** 2 + (closStart[1] - startPos[1]) ** 2)
-                minDist.append(costToStart + self.State.nodeConnections[closestStartInd[i]][closestGoalInd][-1])
+            # minDist = []
+            # for i in range(np.size(closestStartInd,0)):
+            #     closStart = self.State.nodes[closestStartInd[i]]
+            #     costToStart = np.sqrt((closStart[0] - startPos[0]) ** 2 + (closStart[1] - startPos[1]) ** 2)
+            #     minDist.append(costToStart + self.State.nodeConnections[closestStartInd[i]][closestGoalInd][-1])
 
             nodesToGo = [self.State.nodeConnections[i][closestGoalInd][-1] for i in closestStartInd]
             distToGoals = np.asarray(nodesToGo) + np.asarray(closestStartDist)
@@ -430,27 +444,33 @@ class getAllCommands:
                 nom = np.hstack((nom,0))
                 closestStart = self.State.nodes[closestStartInd[indOfNext]]
                 costToStart = np.sqrt((closestStart[0] - startPos[0]) ** 2 + (closestStart[1] - startPos[1]) ** 2)
-                costToGoal = np.sqrt((goalPoint[0] - closestGoal[0]) ** 2 + (goalPoint[1] - closestGoal[1]) ** 2)
+                costToGoal = np.sqrt((phi.point[0] - closestGoal[0]) ** 2 + (phi.point[1] - closestGoal[1]) ** 2)
                 pathCost = self.State.nodeConnections[closestStartInd[indOfNext]][closestGoalInd][-1]
 
                 cost = costToStart + costToGoal + pathCost
-
         else:
-            nom = goalPoint - startPos
+            nom = phi.point - startPos
             nom = np.hstack((nom, 0))
-            cost = np.sqrt((goalPoint[0] - startPos[0]) ** 2 + (goalPoint[1] - startPos[1]) ** 2)
+            cost = np.sqrt((phi.point[0] - startPos[0]) ** 2 + (phi.point[1] - startPos[1]) ** 2)
 
-        # print(time.time()-a)
         return nom, cost
 
     def intersectPoint(self, x1, y1, x2, y2, x3, y3, x4, y4):
-        denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
-
-        ua = np.divide(((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)), denom)
-        ub = np.divide(((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)), denom)
+        ua = np.divide(((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)), ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)))
+        ub = np.divide(((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)), ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)))
 
         isect = (ua>=0)*(ub>=0)*(ua<=1)*(ub<=1)
+        return isect
 
+    def intersectPointVec(self, x1, y1, x2, y2, x3, y3, x4, y4):
+        denom = np.outer((x2 - x1),(y4 - y3)) - np.outer((y2 - y1),(x4 - x3))
+
+        ua = np.divide(((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)), denom)
+        ub = (np.outer((x2 - x1), (y1 - y3)) - np.outer((y2 - y1), (x1 - x3)))/ denom
+
+        isect = (ua>=0)*(ub>=0)*(ua<=1)*(ub<=1)
+        isect = np.any(isect, axis=1)
+        isect = np.where(isect == False)[0]
         return isect
 
     def distWall(self, p1, p2, pt):

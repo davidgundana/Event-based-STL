@@ -205,7 +205,6 @@ class formData:
             print('Number of edges: ' + str(buch.num_edges()))
 
             auto = buch.to_str('HOA')
-            # spot.translate(spotSTL, 'sbacc','Small').to_str('spin')
             auto = auto.splitlines()
             auto = auto[1:]
 
@@ -239,7 +238,6 @@ class formData:
             # Find number of inputs
             self.N = np.size(specattr.propositions) - np.size(self.controllableProp)
 
-
             # load in map and nodes
             self.map = np.loadtxt(self.filename3)
             self.nodes = np.loadtxt(self.filename4)
@@ -258,13 +256,9 @@ class formData:
             self.State = initializeSpec.specInfo(specattr, specattr.spec, specattr.props, specattr.propositions, phi,
                         self.controllableProp, self.M, text1, master,self.map,self.nodes,
                                                  self.nodeGraph, self.nodeConnections)
+
             # Evaluating each transition formula at runtime can be expensive. this function simplifies the formulas.
             self.State = prepBuchi.prep(self.State,specattr.propositions,text1,master)
-
-            # self.updateStatus(text1, master, '\nChecking for conflicts')
-            # Check for non-intersecting sets in all transitions (Can be very expensive)
-            # conf = checkForConflicts.check(self.State, self.M, text1, master)
-            # self.Conflicts = conf
 
             elapsedT2 = time.time() - t2
             timeToFinish = 'The total time prepare the Event-based STL formula was ' + str(elapsedT2) + ' seconds.'
@@ -349,9 +343,6 @@ class formData:
                   command=(lambda e=master: self.upload2(e))).grid(row=7,column=1, sticky=tk.W,pady=4)
         tk.Label(master, text=os.path.split(self.filename2)[-1]).grid(row=7, column=2)
 
-
-
-
         tk.Button(master, text='Upload', highlightbackground='orange',
                   command=(lambda e=master: self.upload3(e))).grid(row=9,column=1, sticky=tk.W,pady=4)
         tk.Label(master, text=os.path.split(self.filename3)[-1]).grid(row=9, column=2)
@@ -379,33 +370,6 @@ class formData:
         tk.Button(master, text='Apply', highlightbackground='green',
                   command=(lambda e=results: self.userData(e))).grid(row=14, column=1, sticky=tk.W, pady=6)
 
-    def create_buchi(self, mission_spec, remove=True):
-        # create buchi
-        import spot
-        import networkx as nx
-        f = spot.translate(mission_spec, 'BA', 'deterministic', 'complete','sbacc')
-        file = open('formula.dot', "w")
-        file.write(f.to_str('dot'))
-        file.close()
-        # convert buchi to nx
-        f_nx = (nx.drawing.nx_pydot.read_dot('formula.dot'))
-
-        # label accepting states
-        accepting_states = self.find_accepting_states(f.to_str('dot'))
-        accepting_labels = {k: 'F' for k in accepting_states}
-        nx.set_node_attributes(f_nx, accepting_labels, 'accepting')
-
-        # find initial state
-        init_buchi = list(f_nx.successors('I'))[0]
-
-        f_temp = f_nx.copy()
-        # init_buchi = list(f_temp.successors('I'))[0]        # buchi should only have one init state
-        # print(accepting_states, init_buchi)
-        if remove:
-            f_temp.remove_node('I')
-
-        return f_temp, accepting_states, init_buchi
-
     def find_accepting_states(self,dot_str):
         '''
         to be an accepting state: 'peripheries=2' and there exists transition state -> state
@@ -414,8 +378,6 @@ class formData:
         for line in dot_str.split('\n'):
             if line.find('peripheries=2') != -1:
                 s = line.split()[0]
-                check_transition = s + ' -> ' + s
-                # if check_transition in dot_str:
                 states.append(s)
         return states
 
@@ -508,7 +470,7 @@ if __name__ == "__main__":
             savemat(filePathM, dict)
     elif loadOnStart == 1:
         my_dir = os.path.dirname(os.path.abspath(__file__))
-        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'RALSpecPhysical.pkl')
+        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'robotDemo.pkl')
         with open(pickle_file_path, 'rb') as input:
             f = pickle.load(input)
         #Get the inputs for the function to get robot commands. Inputs can be from gui or from a copied message
@@ -599,14 +561,20 @@ if __name__ == "__main__":
             plt.draw()
             plt.pause(0.001)
             robots = {}
-            colors = ["red", "blue", "green","black"]
+            colors = ["red", "blue", "blue", "green", "green"]
+            if f.M == 7:
+                colors = ["red", "blue", "blue", "blue","green","green","green"]
+            if f.M == 9:
+                colors = ["red", "blue", "blue","green","green","black","black","cyan","cyan"]
+
             shapes = ['o','^','s']
             for i in range(f.M):
-                numR = np.floor(f.M/2)
-                if i < int(numR-1):
-                    robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker=shapes[0], markersize=3, color=colors[0])
-                else:
-                    robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker=shapes[int(np.floor((i+1)/numR))], markersize=3, color=colors[int(np.floor((i+1)/numR))])
+                robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker=shapes[0], markersize=3, color=colors[i])
+
+            # circle1 = plt.Circle((f.initPosRef[3], f.initPosRef[4]), 0.75, color='r', fill=False)
+            # circle2 = plt.Circle((f.initPosRef[6], f.initPosRef[7]), 0.75, color='r', fill=False)
+            # ax.add_patch(circle1)
+            # ax.add_patch(circle2)
 
             plt.draw()
             plt.pause(0.001)
@@ -664,7 +632,7 @@ if __name__ == "__main__":
                                                                                posPY, posPTheta,
                                                                                runTime, 0, currState,
                                                                                input, I.until)
-            print(vx[0],vy[0])
+            # print(vx[0],vy[0])
             loopTime = time.time()-loopStart
             input = newInput
             allTimes.append(loopTime)
@@ -680,10 +648,7 @@ if __name__ == "__main__":
                 posX[i] = posX[i] + vx[0][i] * loopTime
                 posY[i] = posY[i] + vy[0][i] * loopTime
                 posTheta[i] = posTheta[i] + vtheta[0][i] * loopTime
-                if i == 0:
-                    robots[str(i)] = ax.plot(posX[i],posY[i], marker=shapes[0], markersize=3, color=colors[0])
-                else:
-                    robots[str(i)] = ax.plot(posX[i],posY[i], marker=shapes[int(np.floor((i+1)/numR))], markersize=3, color=colors[int(np.floor((i+1)/numR))])
+                robots[str(i)] = ax.plot(posX[i],posY[i], marker=shapes[0], markersize=3, color=colors[i])
 
             # Hard Code pos of human and spills for experiment
             posPX[0] = posX[0]

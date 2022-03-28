@@ -3,6 +3,7 @@ import matrixDijkstra
 import re
 import networkx as nx
 from itertools import islice
+from itertools import permutations
 import copy
 import time
 
@@ -25,14 +26,12 @@ class activateProp:
         self.preF = preF
         self.conditions = conditions
         self.robustRef = []
-        self.time2FinishRef = []
         self.distFromSafeRef = []
         self.input = input_
         self.getNom = getNom
         np.seterr(divide='ignore')
 
     def activate(self,currState,conditions,pos,posRef,t,preF):
-        a = time.time()
         props = self.props
         wall = self.State.wall
         self.conditions = conditions
@@ -116,7 +115,6 @@ class activateProp:
         # first we choose the transition with the most infinities. this is the highest robustness
         numMax = np.count_nonzero(np.isinf(allTransitions), axis=1)
         maxLoc = np.argwhere(numMax == np.amax(numMax)).ravel()
-
         if np.size(maxLoc) == 1:
             # only one maximum robustness
             trans2Make = allTransitions[maxLoc[0]]
@@ -127,11 +125,7 @@ class activateProp:
         else:
             # Need to break the tie by computing robustness for those that are tied
             allTransMax = allTransitions[maxLoc, :]
-            # a = time.time()
             trans2Make = self.pickTransition(allTransMax, pos, props, t, wall, posRef)
-            # print(time.time() - a)
-            # if t > 0:
-            #     print('here')
 
         stateLoc = np.where((allTransitions == trans2Make).all(axis=1))[0][0]
 
@@ -173,11 +167,9 @@ class activateProp:
         allRobustId = []
         if np.size(self.robustRef) == 0:
             robustRef = [None] * np.size(self.State.phi)
-            time2FinishRef = [None] * np.size(self.State.phi)
             distFromSafeRef = [None] * np.size(self.State.phi)
         else:
             robustRef = self.robustRef
-            time2FinishRef = self.time2FinishRef
             distFromSafeRef = self.distFromSafeRef
 
         for i in range(np.size(allTransMax,0)):
@@ -198,7 +190,6 @@ class activateProp:
                 else:
                     robustness.append(robustRef[satisfiedPhi[j].id])
                     ids.append(satisfiedPhi[j].id)
-
             for ii in range(1,self.M+1):
                 phiRobot = []
                 for j in range(np.size(unsatisfiedPhi)):
@@ -208,9 +199,7 @@ class activateProp:
                 if len(phiRobot) == 1:
                     if robustRef[phiRobot[0].id] is None:
                         totalDist = phiRobot[0].distFromSafe
-                        robot = phiRobot[0].robotsInvolved[0]
-                        maxV = self.maxV[3 * robot - 3]
-                        time2Finish = totalDist / maxV
+                        time2Finish = phiRobot[0].time2Finish
                         if self.preF == 1 and not isinstance(phiRobot[0].inputTime, int):
                             timeRemaining = phiRobot[0].interval[1]
                         else:
@@ -221,7 +210,6 @@ class activateProp:
                         timeBuffer = timeRemaining - time2Finish
                         robtemp = self.weights[1] * timeBuffer
                         robustRef[phiRobot[0].id] = robtemp
-                        time2FinishRef[phiRobot[0].id] = time2Finish
                         distFromSafeRef[phiRobot[0].id] = totalDist
                         robustness.append(robtemp)
                         ids.append(phiRobot[0].id)
@@ -230,98 +218,90 @@ class activateProp:
                         ids.append(phiRobot[0].id)
                 elif len(phiRobot) > 1:
                     #Need to do prioritization
-                    times = []
-                    for j in range(np.size(phiRobot)):
-                        if self.preF == 1 and not isinstance(phiRobot[j].inputTime, float):
-                            timeLeft = phiRobot[j].interval[1]
-                        else:
-                            if t > phiRobot[j].interval[1]:
-                                timeLeft = (phiRobot[j].interval[1] + phiRobot[j].inputTime)
+                    possOrders = list(permutations(range(np.size(phiRobot))))
+                    robustnessTEMP = []
+                    idsTEMP = []
+                    for j in range(np.size(possOrders,0)):
+                        time2FinishPrev = 0
+                        robustRow = []
+                        idsRow = []
+                        for k in range(np.size(possOrders[j],0)):
+                            if k == 0:
+                                if robustRef[phiRobot[possOrders[j][k]].id] is None:
+                                    totalDist = phiRobot[possOrders[j][k]].distFromSafe
+                                    time2Finish = phiRobot[possOrders[j][k]].time2Finish
+
+                                    if self.preF == 1 and t > phiRobot[possOrders[j][k]].interval[1]+phiRobot[possOrders[j][k]].inputTime:
+                                        # time passed. full time bound remains
+                                        timeRemaining = phiRobot[possOrders[j][k]].interval[1]
+                                    elif self.preF == 1:
+                                        timeRemaining = (phiRobot[possOrders[j][k]].interval[1] + phiRobot[possOrders[j][k]].inputTime) - t
+                                    else:
+                                        if isinstance(phiRobot[possOrders[j][k]].inputTime, float):
+                                                timeRemaining = (phiRobot[possOrders[j][k]].interval[1] + phiRobot[possOrders[j][k]].inputTime) - t
+                                        else:
+                                            timeRemaining = phiRobot[possOrders[j][k]].interval[1] - t
+
+                                    timeBuffer = timeRemaining - time2Finish
+                                    time2FinishPrev += time2Finish
+                                    robtemp = self.weights[1] * timeBuffer
+                                    robustRef[phiRobot[possOrders[j][k]].id] = robtemp
+                                    distFromSafeRef[phiRobot[possOrders[j][k]].id] = totalDist
+                                    robustRow.append(robtemp)
+                                    idsRow.append(phiRobot[possOrders[j][k]].id)
+                                else:
+                                    robustRow.append(robustRef[phiRobot[possOrders[j][k]].id])
+                                    idsRow.append(phiRobot[possOrders[j][k]].id)
                             else:
-                                timeLeft = (phiRobot[j].interval[1] + phiRobot[j].inputTime)- t
-                        times.append(timeLeft)
-
-                    isTie = np.all(times == times[0])
-
-                    #If everything is a tie we need to go to second priorization. Else order by time
-                    if isTie:
-                        #Location Priorization
-                        dist = []
-                        for j in range(np.size(phiRobot)):
-                            distFromSafe = phiRobot[j].distFromSafe
-                            signF = phiRobot[j].signFS[0]
-                            totalDist = distFromSafe + signF * phiRobot[j].p
-                            dist.append(totalDist)
-                        orderToComplete = np.argpartition(dist,np.size(dist)-1)
-                    else:
-                        orderToComplete = np.argpartition(times,np.size(times)-1)
-
-                    time2FinishPrev = 0
-
-                    for j in range(np.size(orderToComplete)):
-                        if j == 0:
-                            if robustRef[phiRobot[orderToComplete[j]].id] is None:
-                                distFromSafe = phiRobot[orderToComplete[j]].distFromSafe
-                                signF = phiRobot[orderToComplete[j]].signFS[0]
-                                totalDist = distFromSafe + signF * phiRobot[orderToComplete[j]].p
-                                robot = phiRobot[orderToComplete[j]].robotsInvolved[0]
+                                posTemp = copy.deepcopy(pos)
+                                posTemp[phiRobot[possOrders[j][k]].nom[0, 0:2].astype('int')] = phiRobot[
+                                    possOrders[j][k-1]].point
+                                nom, costTemp = self.getNom(phiRobot[possOrders[j][k]], posTemp, posRef)
+                                distFromSafe2 = phiRobot[possOrders[j][k-1]].distFromSafe + costTemp
+                                signF = phiRobot[possOrders[j][k]].signFS[0]
+                                totalDist = distFromSafe2 + signF * phiRobot[j].p
+                                robot = phiRobot[possOrders[j][k]].robotsInvolved[0]
                                 maxV = self.maxV[3 * robot - 3]
                                 time2Finish = totalDist / maxV
-                                if self.preF == 1 and not isinstance(phiRobot[orderToComplete[j]].inputTime, int):
-                                    timeRemaining = phiRobot[orderToComplete[j]].interval[1]
+                                if self.preF == 1 and not isinstance(phiRobot[possOrders[j][k]].inputTime, float):
+                                    timeRemaining = phiRobot[possOrders[j][k]].interval[1]
                                 else:
-                                    if isinstance(phiRobot[orderToComplete[j]].inputTime, int):
-                                        timeRemaining = (phiRobot[orderToComplete[j]].interval[1] + phiRobot[orderToComplete[j]].inputTime) - t
-                                    else:
-                                        timeRemaining = phiRobot[orderToComplete[j]].interval[1] - t
-
-                                timeBuffer = timeRemaining - time2Finish
+                                    timeRemaining = (phiRobot[possOrders[j][k]].interval[1] + phiRobot[possOrders[j][k]].inputTime) - t
+                                timeBuffer = timeRemaining - (time2Finish + time2FinishPrev)
                                 time2FinishPrev += time2Finish
-                                robtemp = self.weights[1] * timeBuffer
-                                robustness.append(robtemp)
-                                ids.append(phiRobot[orderToComplete[j]].id)
-                                robustRef[phiRobot[orderToComplete[j]].id] = robtemp
-                                time2FinishRef[phiRobot[orderToComplete[j]].id] = time2FinishPrev
-                                distFromSafeRef[phiRobot[orderToComplete[j]].id] = distFromSafe
+                                idsRow.append(phiRobot[possOrders[j][k]].id)
+                                robustRow.append(self.weights[1] * timeBuffer)
+                        robustnessTEMP.append(robustRow)
+                        idsTEMP.append(idsRow)
+                    minFound = 0
+                    robustCopy = copy.deepcopy(robustnessTEMP)
+                    while minFound == 0:
+                        minInd = []
+                        for j in range(np.size(robustCopy, 0)):
+                            minInd.append(np.argmin(robustCopy[j]))
+                        # create a vector of the minimum values
+                        minResponse = np.empty((1, np.size(minInd)))
+                        for j in range(np.size(minInd)):
+                            minResponse[0, j] = robustCopy[j][minInd[j]]
+                        if len(minResponse[0]) != 0:
+                            maxVal = np.amax(minResponse[0])
+                            maxInd = np.where(minResponse[0] == maxVal)[0]
+                            if np.size(maxInd) == 1:
+                                minFound = 1
+                                indOfTrans = maxInd[0]
                             else:
-                                ids.append(phiRobot[orderToComplete[j]].id)
-                                robustness.append(robustRef[phiRobot[orderToComplete[j]].id])
-                                time2FinishPrev = time2FinishRef[phiRobot[orderToComplete[j]].id]
-                                distFromSafe = distFromSafeRef[phiRobot[orderToComplete[j]].id]
+                                robustCopy = [robustCopy[j] for j in maxInd]
+                                robustCopy = robustCopy[maxInd, :]
+                                [robustCopy[j].remove(maxVal) for j in range(np.size(robustCopy, 0))]
+                                robustCopy = [j for j in robustCopy if j]
                         else:
-                            posTemp = copy.deepcopy(pos)
-                            if len(phiRobot[orderToComplete[j-1]].point) != 0:
-                                try:
-                                    posTemp[phiRobot[orderToComplete[j]].nom[0, 0:2].astype('int')] = phiRobot[orderToComplete[j-1]].point
-                                except:
-                                    for jj in range(np.size(phiRobot[orderToComplete[j-1]].point)):
-                                        phiRobot[orderToComplete[j - 1]].point[jj] = eval(phiRobot[orderToComplete[j-1]].point[jj])
-                                    posTemp[phiRobot[orderToComplete[j]].nom[0, 0:2].astype('int')] = phiRobot[
-                                        orderToComplete[j - 1]].point
-                            else:
-                                posTemp = np.array([posTemp[0],posTemp[1]])
+                            minFound = 1
+                            indOfTrans = 0
+                    robustness.extend(robustnessTEMP[indOfTrans])
+                    ids.extend(idsTEMP[indOfTrans])
 
-                            nom, costTemp = self.getNom(phiRobot[orderToComplete[j]], posTemp, posRef)
-                            distFromSafe2 = distFromSafe + costTemp
-                            signF = phiRobot[orderToComplete[j]].signFS[0]
-                            totalDist = distFromSafe2 + signF * phiRobot[j].p
-                            robot = phiRobot[orderToComplete[j]].robotsInvolved[0]
-                            maxV = self.maxV[3 * robot - 3]
-                            time2Finish = totalDist / maxV
-                            if self.preF == 1 and not isinstance(phiRobot[j].inputTime, float):
-                                timeRemaining = phiRobot[j].interval[1]
-                            else:
-                                timeRemaining = (phiRobot[j].interval[1] + phiRobot[j].inputTime) - t
-                            timeBuffer = timeRemaining - (time2Finish + time2FinishPrev)
-                            time2FinishPrev += time2Finish
-                            ids.append(phiRobot[orderToComplete[j]].id)
-                            robustness.append(self.weights[1] * timeBuffer)
-            # robustness.sort()
             allRobust.append(robustness)
             allRobustId.append(ids)
-
-        # allRobust = allRobust[1:,:]
-
 
         #Choose transition that has the maximum minimum
         minFound = 0
@@ -333,33 +313,22 @@ class activateProp:
         while minFound ==0:
             minInd = []
             for i in range(np.size(allRobustCopy, 0)):
-                try:
-                    minInd.append(np.argmin(allRobustCopy[i]))
-                except:
-                    print('here')
+                minInd.append(np.argmin(allRobustCopy[i]))
             #create a vector of the minimum values
             minResponse = np.empty((1,np.size(minInd)))
             for i in range(np.size(minInd)):
-                try:
-                    minResponse[0,i] = allRobustCopy[i][minInd[i]]
-                except:
-                    print('here')
+                minResponse[0,i] = allRobustCopy[i][minInd[i]]
             if len(minResponse[0]) != 0:
                 maxVal = np.amax(minResponse[0])
                 maxInd = np.where(minResponse[0] == maxVal)[0]
                 if np.size(maxInd) == 1:
                     minFound = 1
-                    ind = [i for i in range(np.size(allRobustCopy, 0)) if maxVal in allRobustCopy[i]]
                     indOfTrans = maxInd[0]
-                    # indOfTrans = ind[0]
-
                 else:
                     allRobustCopy = [allRobustCopy[i] for i in maxInd]
                     allTransMaxCopy = allTransMaxCopy[maxInd, :]
-                    indToDelete = [allRobustCopy[i].index(maxVal) for i in range(np.size(allRobustCopy, 0))]
                     [allRobustCopy[i].remove(maxVal) for i in range(np.size(allRobustCopy, 0))]
                     allRobustCopy = [i for i in allRobustCopy if i]
-                    # allRobustCopy = np.delete(allRobustCopy,indToDelete,1)
             else:
                 minFound = 1
                 indOfTrans = 0
@@ -367,9 +336,10 @@ class activateProp:
         trans2Make = allTransMaxCopy[indOfTrans, :]
         self.robustness = allRobustCopy[indOfTrans]
         self.robustness = allRobust[np.where(np.all(allTransMax == trans2Make,axis=1))[0][0]]
+        # if any(x < 0 for x in self.robustness) and t > 15:
+        #     print('here')
         self.ids = allRobustId[np.where(np.all(allTransMax == trans2Make,axis=1))[0][0]]
         self.robustRef = robustRef
-        self.time2FinishRef = time2FinishRef
         self.distFromSafeRef = distFromSafeRef
         return trans2Make
 
