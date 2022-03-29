@@ -204,6 +204,19 @@ class getAllCommands:
             dir[1] = re.findall('(?=\().+(?<=\))', dir[1])[0]
             vals = [-eval(elem, {'__builtins__': None}, {'pos': pos, 'np': np, 'posRef': posRef, 'wall':wall}) for elem in dir]
             self.State.phi[i].nom[1, 0:2] = vals
+            #Need to reset the point in case it needs to be evaluated
+            dirRef = self.State.phi[i].dir
+            self.State.phi[i].point = []
+            for j in range(len(dirRef)):
+                try:
+                    self.State.phi[i].point.append(-1 * float(re.search('(?=(\+|\-)).+(?=$)', dirRef[j])[0]))
+                except:
+                    try:
+                        self.State.phi[i].point.append(re.search('(?=posRef\[).+(?<=\])', dirRef[j])[0])
+                    except:
+                        pass
+            self.State.phi[i].point = np.asarray(self.State.phi[i].point)
+
             try:
                 if not isinstance(self.State.phi[i].point[0], float):
                     self.State.phi[i].point = [eval(self.State.phi[i].point[0]), eval(self.State.phi[i].point[1])]
@@ -223,7 +236,6 @@ class getAllCommands:
                 self.State.phi[i].distFromSafe = cost + signF * self.State.phi[i].p
                 rob = self.State.phi[i].robotsInvolved[0]
                 self.State.phi[i].time2Finish = cost / self.maxV[3 * rob - 3]
-
             self.State.phi[i].nom[1, :] = nomR
 
         self.props = props
@@ -348,7 +360,6 @@ class getAllCommands:
                     Anew = A[3 * i - 3:3 * i]
                     lbI = lb[3 * i - 3:3 * i]
                     ubI = ub[3 * i - 3:3 * i]
-
                     if np.any(nominals):
                         x0 = nominals[1,:]
                     else:

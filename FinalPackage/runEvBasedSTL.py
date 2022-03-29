@@ -447,7 +447,7 @@ class cmdInp:
 
 
 if __name__ == "__main__":
-    loadOnStart = 0
+    loadOnStart = 1
     if loadOnStart == 0:
         f = formData()
         f.makeForm()
@@ -618,6 +618,14 @@ if __name__ == "__main__":
             if runTime > 5:
                 input[2] = 0
                 input[3] = 0
+            if runTime > 7:
+                input[2] = 1
+                input[3] = 7
+                posPX[0] = 2
+                posPY[0] = -1
+            if runTime > 9:
+                input[2] = 0
+                input[3] = 0
             if f.N > 2:
                 if runTime > 4:
                     input[4] = 1
@@ -651,9 +659,9 @@ if __name__ == "__main__":
                 robots[str(i)] = ax.plot(posX[i],posY[i], marker=shapes[0], markersize=3, color=colors[i])
 
             # Hard Code pos of human and spills for experiment
-            posPX[0] = posX[0]
-            posPY[0] = posY[0]
-            posPTheta[0] = posTheta[0]
+            # posPX[0] = posX[0]
+            # posPY[0] = posY[0]
+            # posPTheta[0] = posTheta[0]
 
             if realTime:
                 runTime = time.time()-startTime
