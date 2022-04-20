@@ -58,14 +58,14 @@ class runRobot:
 
     def callback0(self,data):
         self.posX[0] = data.pose.position.x
-        self.posY[0] = -data.pose.position.y
-        self.posTheta[0] = -self.euler_from_quaternion(data.pose.orientation.x, data.pose.orientation.y,
+        self.posY[0] = data.pose.position.y
+        self.posTheta[0] = self.euler_from_quaternion(data.pose.orientation.x, data.pose.orientation.y,
                                                           data.pose.orientation.z, data.pose.orientation.w)
 
     def callback1(self,data):
         self.posPX[0] = data.pose.position.x
-        self.posPY[0] = -data.pose.position.y
-        self.posPTheta[0] = -self.euler_from_quaternion(data.pose.orientation.x, data.pose.orientation.y,
+        self.posPY[0] = data.pose.position.y
+        self.posPTheta[0] = self.euler_from_quaternion(data.pose.orientation.x, data.pose.orientation.y,
                                                           data.pose.orientation.z, data.pose.orientation.w)
 
     def listener(self):
@@ -88,20 +88,31 @@ class runRobot:
         startTime = time.time()
         runTime = 0
         triggered = 0
+        computeTime = []
         while True:
             # Stop the Thread if script closed
             global stop_threads
             if stop_threads:
                 break
+            if runTime > 50:
+                avgCompute = np.sum(computeTime)/np.size(computeTime)
+                print('average compute time: ' + str(avgCompute))
+                stop_threads = True
+                a = kd
+                break
+
             STL = 1
             if STL:
                 try:
+                    cTime = time.time()
                     vx, vy, vt, self.currState, dis, newInput, unt = getCMD(self.f, self.posX, self.posY, self.posTheta,
                                                                                      self.posXinit, self.posYinit,
                                                                                      self.posThetainit, self.posPX,
                                                                                      self.posPY, self.posPTheta,
                                                                                      runTime, 0, self.currState,
                                                                                      self.input, [])
+                    totalCTime = time.time()-cTime
+                    computeTime.append(totalCTime)
                 except:
                     vx = [[0]]
                     vy = [[0]]
