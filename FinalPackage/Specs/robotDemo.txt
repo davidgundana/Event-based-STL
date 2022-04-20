@@ -1,1 +1,1 @@
-G(((exit1) => (ev_[0,600] sqrt[[pos[0]-5]^2+[pos[1]-5]^2]<2)) & ((follow1) => (ev_[0,60] sqrt[[pos[0]-posRef[0]]^2+[pos[1]-posRef[1]]^2]<2))  & (alw_[0,300] sqrt[[pos[0]-posRef[0]]^2+[pos[1]-posRef[1]]^2]>1))
+G(((exit1) => (ev_[0,600] sqrt[[pos[0]-7]^2+[pos[1]-7]^1]<2)) & ((follow1) => (ev_[0,60] sqrt[[pos[0]-posRef[0]]^2+[pos[1]-posRef[1]]^2]<2))  & (alw_[0,300] sqrt[[pos[0]-posRef[0]]^2+[pos[1]-posRef[1]]^2]>1))
