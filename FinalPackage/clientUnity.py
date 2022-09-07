@@ -420,15 +420,15 @@ def getNom(State, pos, p):
     return nom, dist2NextPoint, distx, disty, distTotal, nodes[int(rute[-1])]
 
 
-def intersectPoint(x1, y1, x2, y2, x3, y3, x4, y4):
-    denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
-
-    ua = np.divide(((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)), denom)
-    ub = np.divide(((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)), denom)
-
-    isect = (ua >= 0) * (ub >= 0) * (ua <= 1) * (ub <= 1)
-
-    return isect
+# def intersectPoint(x1, y1, x2, y2, x3, y3, x4, y4):
+#     denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
+#
+#     ua = np.divide(((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)), denom)
+#     ub = np.divide(((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)), denom)
+#
+#     isect = (ua >= 0) * (ub >= 0) * (ua <= 1) * (ub <= 1)
+#
+#     return isect
 
 def distWall( p1, p2, pt):
     dx = p2[0] - p1[0]

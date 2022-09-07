@@ -2,49 +2,73 @@ import numpy as np
 import re
 import matrixDijkstra
 
-def barrier(State,pos, posStart,posRef, t, Ts, phi, tmax, hz, wall, preF):
-    # Initialize the candidate barrier functions
-    bxt_i = []
-    bxt_eventually = []
-    activatedProps = []
-    props = State.props
-    # Loop through the STL Formulas
-    for i in range(0, np.size(phi)):
-        # for the stl formula find the bounds of the interval.Default is[0-inf]
-        a = phi[i].interval[0]
-        b = phi[i].interval[1]
-
-        # Determine whether until, eventually, or always
-        type = phi[i].type
-
-        # if implication exists make sure timing bounds is correct
-        if phi[i].implies == 1:
-            inputTime = phi[i].inputTime
+def barrier(pi, x,xR, t, wall, roadmap, preF):
+    # Determine whether until, eventually, or always
+    if pi.t_e == []:
+        inputTime = 0
+    else:
+        inputTime = pi.t_e
+    if pi.type == 'ev':
+        # If the interval has passed, then the barrier function doesnt matter
+        if t >= pi.a + inputTime and t <= pi.b + inputTime and not pi.currentTruth:
+            pi = evBarrier(pi, t, x, xR ,wall,roadmap, preF)
         else:
-            inputTime = 0
+            pi.bxt_i = None
+    if pi.type == 'alw':
+        # if phi[i].until == 1:
+        #     # If phiUntil is True then we should set the time so that the time period has passed.
+        #     isUntTrue = eval(phi[i].phiUntil)
+        #     if isUntTrue == 1 and t >= a:
+        #         b = t - .1
 
-        if type == 'ev':
-            # If the interval has passed, then the barrier function doesnt matter
-            if t >= a + inputTime and t <= b + inputTime:
-                bxtTemp, phi[i] = evBarrier(State, phi[i], t, Ts, a, b, inputTime, pos, posRef, posStart, hz,wall,preF)
-                bxt_i.append(bxtTemp)
-                activatedProps.append(phi[i].prop_label)
-                bxt_eventually.append(bxtTemp)
-            else:
-                phi[i].bxt_i = 0
+        if t >= pi.a + inputTime and t <= pi.b + inputTime:
+            pi = alBarrier(pi, t, x, xR ,wall, roadmap,preF)
+    return pi
 
-        if type == 'alw':
-            if phi[i].until == 1:
-                # If phiUntil is True then we should set the time so that the time period has passed.
-                isUntTrue = eval(phi[i].phiUntil)
-                if isUntTrue == 1 and t >= a:
-                    b = t - .1
+def totalBarrier(specattr, ind, indOfActive):
+    bxt_i = []
+    piRobot = []
+    for i in range(np.size(indOfActive,0)):
+        if np.any(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].robotsInvolved== ind):
+            try:
+                if not (specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].type == 'ev' and specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].currentTruth):
+                    if specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].bxt_i is not None:
+                        bxt_i.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].bxt_i)
+                        piRobot.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]])
+            except:
+                print('fail')
+                pass
+        else:
+            print('not active')
+    bxt_iNew = []
+    if np.size(bxt_i) > 1 and np.where(np.array(bxt_i)==0)[0].size != 0:
+        for k in range(0, np.size(bxt_i)):
+            if bxt_i[k] != 0:
+                bxt_iNew.append(bxt_i[k])
 
-            if t >= a + inputTime and t <= b + inputTime:
-                bxt_i.append(alBarrier(State, phi[i], t, Ts, a, b, pos, posRef, tmax, None,wall,preF))
-                activatedProps.append(phi[i].prop_label)
+        bxt_i = bxt_iNew
 
+    bxt_i = np.unique(bxt_i)
 
+    if np.where(bxt_i!=0)[0].size != 0:
+        bxt = 0
+        for k in range(0, np.size(bxt_i)):
+            try:
+                bxt = bxt + np.exp(-bxt_i[k])
+            except:
+                print('here')
+        bxt = -np.log(bxt)
+    else:
+        bxt = 0
+
+    if bxt < 0:
+        print('here')
+    return bxt, piRobot
+
+def partialTotalBarrier(piDis):
+    bxt_i = []
+    for i in range(np.size(piDis,0)):
+        bxt_i.append(piDis[i].bxt_i)
 
     bxt_iNew = []
     if np.size(bxt_i) > 1 and np.where(np.array(bxt_i)==0)[0].size != 0:
@@ -56,7 +80,6 @@ def barrier(State,pos, posStart,posRef, t, Ts, phi, tmax, hz, wall, preF):
 
     bxt_i = np.unique(bxt_i)
 
-
     if np.where(bxt_i!=0)[0].size != 0:
         bxt = 0
         for k in range(0, np.size(bxt_i)):
@@ -65,54 +88,59 @@ def barrier(State,pos, posStart,posRef, t, Ts, phi, tmax, hz, wall, preF):
     else:
         bxt = 0
 
-    #want to return a matrix of all of the barrier functions for "eventually"
-    return bxt, phi, activatedProps, bxt_eventually
+    return bxt
 
-
-def evBarrier(State, phi, t, Ts, a, b, inputTime, pos, posRef, posStart, hz,wall,preF):
-    p = phi.p
-    funcOf = phi.funcOf
-    numPos = np.size(re.findall('pos', funcOf))
-
+def evBarrier(pi, t, x, xR ,wall,roadmap, preF):
+    buffer = 5
+    hxt = eval(pi.hxt)
+    if pi.hxte == []:
+        pi.hxte = hxt + buffer
+    # print('hxt: ', hxt, 'hxte: ', pi.hxte, 'time: ', t-pi.t_e-pi.a)
     # if theres only one bound for the safe-set
-    if np.size(np.where(phi.signFS[0] != 0)) == 1:
-        signF = phi.signFS[0]
-        if numPos >= 2:
-            signF = -1 * signF
+    if np.size(np.where(pi.signFS[0] != 0)) == 1:
+        try:
+            bxt_i = eval(pi.cbf)
+        except:
+            print('here')
+        bxt_i = bxt_i - hxt
 
-        # This only occurs once during initialization to evaluate the initial state
-        initBuffer = 10
-        if t == Ts:
-            if numPos == 1:
-                initDist = abs(eval(funcOf) - p)
-            else:
-                initDist = eval(funcOf)
-            bInit = signF * (initDist-p)
-            aInit = (signF*p - signF*bInit)/b
-            gamInit = (t-(1/hz)-a) * aInit + bInit
-            phi.minVel = gamInit/b
-        else:
-            tempFunc = re.sub('pos\[', 'posStart[', funcOf)
-            if numPos == 1:
-                initDist = abs(eval(tempFunc) - p) + initBuffer
-            else:
-                initDist = eval(tempFunc) + initBuffer
-            bInit = signF * (initDist - p)
-            aInit = (signF * p - signF * bInit) / b
-            # gamInit = (t - (1 / hz) - a) * aInit + bInit
-            gamInit = (t - a) * aInit + bInit
-            phi.minVel = gamInit / b
-
-        # Make the initial barrier function safe set larger to account for any disturbances that can occur or
-        # if the robot needs to go backwards
-        addBuffer = .5
-        b1 = signF * (initDist + addBuffer)
-        a1 = (signF * p - signF * b1) / b
-        # gam = (t - (1 / hz) - a) * a1 + b1
-        gam = (t - a) * a1 + b1
-        bxt_i = gam - signF * eval(funcOf)
-
-        bxt_i = ((t - inputTime - a) * (p-initDist))/(b - a) - (p - initDist) + (p - eval(funcOf))
+        # signF = phi.signFS[0]
+        # if numPos >= 2:
+        #     signF = -1 * signF
+        #
+        # # This only occurs once during initialization to evaluate the initial state
+        # initBuffer = 10
+        # if t == Ts:
+        #     if numPos == 1:
+        #         initDist = abs(eval(funcOf) - p)
+        #     else:
+        #         initDist = eval(funcOf)
+        #     bInit = signF * (initDist-p)
+        #     aInit = (signF*p - signF*bInit)/b
+        #     gamInit = (t-(1/hz)-a) * aInit + bInit
+        #     phi.minVel = gamInit/b
+        # else:
+        #     tempFunc = re.sub('pos\[', 'posStart[', funcOf)
+        #     if numPos == 1:
+        #         initDist = abs(eval(tempFunc) - p) + initBuffer
+        #     else:
+        #         initDist = eval(tempFunc) + initBuffer
+        #     bInit = signF * (initDist - p)
+        #     aInit = (signF * p - signF * bInit) / b
+        #     # gamInit = (t - (1 / hz) - a) * aInit + bInit
+        #     gamInit = (t - a) * aInit + bInit
+        #     phi.minVel = gamInit / b
+        #
+        # # Make the initial barrier function safe set larger to account for any disturbances that can occur or
+        # # if the robot needs to go backwards
+        # addBuffer = .5
+        # b1 = signF * (initDist + addBuffer)
+        # a1 = (signF * p - signF * b1) / b
+        # # gam = (t - (1 / hz) - a) * a1 + b1
+        # gam = (t - a) * a1 + b1
+        # bxt_i = gam - signF * eval(funcOf)
+        #
+        # bxt_i = ((t - inputTime - a) * (p-initDist))/(b - a) - (p - initDist) + (p - eval(funcOf))
 
 
     else:
@@ -121,68 +149,68 @@ def evBarrier(State, phi, t, Ts, a, b, inputTime, pos, posRef, posStart, hz,wall
         coeff = np.polyfit(valP, [0, 1, 0], 2)
         bxt_i = (t - b) + coeff[0] * eval(funcOf)**2 + coeff[1] * eval(funcOf) + coeff[2]
 
-    phi.bxt_i = bxt_i
-    return bxt_i, phi
 
+    pi.bxt_i = bxt_i
 
-def alBarrier(State, phi, t, Ts, a, b, pos, posRef, tmax, unt,wall,preF):
-    p = phi.p
-    funcOf = phi.funcOf
-    if 'wall' in phi.funcOf:
-        tempPos = pos[3*(phi.robotsInvolved[0]-1):3 * (phi.robotsInvolved[0] - 1) + 2]
-        wallTemp = lineseg_dists(tempPos, State.map[:,0:2], State.map[:,2:])
-        wall[2*(phi.robotsInvolved[0]-1):2 * (phi.robotsInvolved[0] - 1) + 2] = wallTemp
+    return pi
+
+def alBarrier(pi, t, x, xR ,wall, roadmap, preF):
+    p = pi.p
+    # Need to recalculate wall position because it may change for partials
+    if 'wall' in pi.hxt:
+        tempPos = x[3*(pi.robotsInvolved[0]-1):3 * (pi.robotsInvolved[0] - 1) + 2]
+        wallTemp = lineseg_dists(tempPos, roadmap.map[:,0:2], roadmap.map[:,2:])
+        wall[2*(pi.robotsInvolved[0]-1):2 * (pi.robotsInvolved[0] - 1) + 2] = wallTemp
     # if theres only one bound for the safe-set
-    if np.size(np.where(phi.signFS[0] != 0)) == 1:
-        signF = phi.signFS[0]
-
+    if np.size(np.where(pi.signFS[0] != 0)) == 1:
+        signF = pi.signFS[0]
         # compute the barrier function
-        bxt_i = 1.3 * signF * (-p + eval(funcOf))
+        valOfFunc = eval(pi.hxt)
+        bxt_i = 1.3 * signF * (-p + eval(pi.hxt))
 
         # This is optional. For speed, if the robot is "far enough" from violation, we will ignore this. Can
         # be commented out
         if signF == -1:
-            if eval(funcOf) < (signF*.7+p):
+            if valOfFunc < (signF*.7+p):
                 bxt_i = 0
         else:
             if p >= 1:
-                if eval(funcOf) > (signF*1+p):
+                if valOfFunc > (signF*1+p):
                     bxt_i = 0
             else:
-                if eval(funcOf) > (signF * 8*p):
-
+                if valOfFunc > (signF * 8*p):
                     bxt_i = 0
-                else:
-                    bxt_i = bxt_i
 
-        bxt_i = 15 * bxt_i
-        phi.bxt_i = bxt_i
-
+        bxt_i = 1*bxt_i
+        pi.bxt_i = bxt_i
     else:
         valP = [1.4 * p[0], (p[0] + p[1]) / 2, .6 * p[1]]
         coeff = np.polyfit(valP,[0,1,0],2)
         bxt_i = coeff[0]*eval(funcOf)**2 + coeff[1]*eval(funcOf) + coeff[2]
 
-    return bxt_i
+    return pi
 
-def partials(State,pos, posStart, posRef, t, Ts, phi, tmax, hz,bxt_i,wall):
+def partials(piRobot, x, xR, t, wall, roadmap, preF,bxtx):
     delt = .01
-    newx = list(pos)
+    newx = list(x)
     bPartialX = []
-    bxt_i = np.asarray(bxt_i)
-    phiRef = phi
-    for i in range(0,np.size(pos)):
+    for i in range(0,np.size(x)):
+        piDis = []
         newx[i] = newx[i] + delt
-        btemp, phiTemp, actProp, beven = barrier(State,newx,posStart, posRef, t, Ts, phi, tmax, hz,wall,1)
-        bPartialX.append((btemp - bxt_i)/delt)
-        newx = list(pos)
+        for k in range(np.size(piRobot)):
+            piDis.append(barrier(piRobot[k], newx, xR, t, wall, roadmap, 0))
+        bTemp = partialTotalBarrier(piDis)
+        bPartialX.append((bTemp - bxtx)/delt)
+        newx = list(x)
 
     newt = t
     bPartialT = []
     for i in range(0,np.size(t)):
         newt = newt + delt
-        btemp, phiTemp,actProp, beven = barrier(State,pos, posStart, posRef, newt, Ts, phi, tmax, hz,wall,1)
-        bPartialT.append((btemp - bxt_i)/delt)
+        for k in range(np.size(piRobot)):
+            piDis.append(barrier(piRobot[k], x, xR, newt, wall, roadmap, 0))
+        bTemp = partialTotalBarrier(piDis)
+        bPartialT.append((bTemp - bxtx)/delt)
         newt = t
 
     return bPartialX, bPartialT

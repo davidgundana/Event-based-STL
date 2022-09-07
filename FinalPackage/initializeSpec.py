@@ -15,25 +15,14 @@ class spec:
         self.accepting_states = accepting # pre-allocate accepting states
         self.controllableProp = [] # pre-allocate controllable propositions
         self.props = [] # value of propositions
+        self.propositions = []
+        self.N = []
         self.initSpec()
 
 
     def initSpec(self):
         # Replace the exclamation points with readable values for python and create an object with the
         # values of all propositions
-        bodyLoc = [re.findall('(BODY)', elem) for elem in self.spec]
-        idxBody = [i for i, x in enumerate(bodyLoc) if len(x) > 0][0]
-
-        AP = [re.findall('(AP\: )', elem) for elem in self.spec]
-        idxAP = [i for i, x in enumerate(AP) if len(x) > 0]
-        allAP = self.spec[idxAP[0]]
-
-        specRef = copy.deepcopy(self.spec)
-        # for i in range(idxBody+1,np.size(self.spec)):
-        #     for j in range(np.size(propositions),0,-1):
-        #         self.spec[i] = re.sub(str(j),propositions[j],self.spec[i])
-        # self.spec = [re.sub("!", "not ", elem) for elem in self.spec]
-
         propo = [re.findall('(?<=\.)\w*', elem) for elem in self.spec]
         flat_propo = [item for sublist in propo for item in sublist]
         indexes = np.unique(flat_propo, return_index=True)[1]
@@ -47,7 +36,12 @@ class spec:
 
         self.props = props
 
-
+        controllableProp = [re.findall('pred', elem) for elem in self.propositions]
+        for i in range(np.size(controllableProp)):
+            if len(controllableProp[i]) != 0:
+                self.controllableProp.append(self.propositions[i])
+        # Find number of inputs
+        self.N = np.size(self.propositions) - np.size(self.controllableProp)
 class propos:
     pass
 
@@ -86,9 +80,6 @@ class specInfo:
         states = [re.findall('(State\:)', elem) for elem in spec]
         idx = [i for i, x in enumerate(states) if len(x) > 0]
         idx.append(len(states)-1)
-        # # Find the location of the body
-        # bodyLoc = [re.findall('(BODY)', elem) for elem in self.spec]
-        # idxBody = [i for i, x in enumerate(bodyLoc) if len(x) > 0][0]
 
         # Translate numbers to AP
         AP = [re.findall('(AP\: )', elem) for elem in spec]
@@ -96,139 +87,59 @@ class specInfo:
         allAP = spec[idxAP[0]]
         propositions = re.findall('"([^"]*)"', allAP)
 
-        # for i in range(np.size(propositions)):
-        # for i in range(idxBody+1,np.size(spec)):
-        #     for j in range(np.size(propositions),0,-1):
-        #         spec[i] = re.sub(str(j),propositions[j],spec[i])
-
         # Go through all States and find the conditions of transitions, the results of the conditions,
         # and the accepting states
+
         State = []
         for i in range(numStates):
             State.append(StatesOfI())
             condRef = spec[idx[i]+1:idx[i+1]]
             for j in range(len(condRef)):
                 condTemp = re.split('] ',condRef[j])
-                condEdit = re.sub('\[','',condTemp[0])
-                if condEdit != 't':
-                    condEditSplit = re.split('(?<=[.&\|])',condEdit)
-                    for k in range(np.size(condEditSplit)):
-                        wholeNum = re.findall('[0-9]+', condEditSplit[k])[0]
-                        condEditSplit[k] = re.sub(wholeNum,'('+propositions[int(wholeNum)]+')',condEditSplit[k])
-                    condFinal = ''.join(condEditSplit)
-                    condSplit2 = re.split('\|',condFinal)
-                    for k in range(np.size(condSplit2)):
-                        condSplit2[k] = '('+condSplit2[k]+')'
-                    condFinal2 = ' | '.join(condSplit2)
-                    condFinal2 = re.sub('&', ' and ',condFinal2)
-                    condFinal2 = re.sub('\|', 'or', condFinal2)
-                    condFinal2 = re.sub('!','not ',condFinal2)
-                    State[i].cond.append(condFinal2)
+                if condTemp[0] != 't':
+                    for k in range(np.size(propositions)):
+                        condTemp[0] = re.sub(' '+str(k)+' ',' ('+propositions[k]+') ',condTemp[0])
+                        condTemp[0] = re.sub(' '+str(k)+'$',' ('+propositions[k]+') ',condTemp[0])
+
+                    condTemp[0] = re.sub(' or ',' ) or ( ',condTemp[0])
+                    condTemp[0] = '(' + condTemp[0] + ')'
+                    State[i].cond.append(condTemp[0])
                 else:
                     State[i].cond.append('All')
                 State[i].result.append(int(condTemp[1]))
+        # toCo = copy.deepcopy(State)
+        # State = []
+        # for i in range(numStates):
+        #     State.append(StatesOfI())
+        #     condRef = spec[idx[i]+1:idx[i+1]]
+        #     for j in range(len(condRef)):
+        #         condTemp = re.split('] ',condRef[j])
+        #         condEdit = re.sub('\[','',condTemp[0])
+        #         if condEdit != 't' and condEdit != ' t':
+        #             condEditSplit = re.split('(?<=[.dr])',condEdit)
+        #             for k in range(np.size(condEditSplit)):
+        #                 try:
+        #                     wholeNum = re.findall('[0-9]+', condEditSplit[k])[0]
+        #                     condEditSplit[k] = re.sub(wholeNum,'('+propositions[int(wholeNum)]+')',condEditSplit[k])
+        #                 except:
+        #                     pass
+        #             condFinal = ''.join(condEditSplit)
+        #             condSplit2 = re.split('or',condFinal)
+        #             for k in range(np.size(condSplit2)):
+        #                 condSplit2[k] = '('+condSplit2[k]+')'
+        #             condFinal2 = ' | '.join(condSplit2)
+        #             condFinal2 = re.sub('&', ' and ',condFinal2)
+        #             condFinal2 = re.sub('\|', 'or', condFinal2)
+        #             condFinal2 = re.sub('!','not ',condFinal2)
+        #             State[i].cond.append(condFinal2)
+        #         else:
+        #             State[i].cond.append('All')
+        #         State[i].result.append(int(condTemp[1]))
+
 
         self.State = State
         self.accepting_states = np.array(self.accepting_states,dtype='int')
-        # Find all states
-        # states = [re.findall('(\_S+\d+\:)', elem) for elem in spec]
-        # if 'all' in ' '.join(spec):
-        #     # find highest state in spec
-        #     highestState = re.findall('(\_S+\d+\:)', ' '.join(spec))
-        #     strHighest = [re.search('[+-]?\d+\.?\d*', s)[0] for s in highestState]
-        #     intHighest = max(list(map(int, strHighest))) + 1
-        #     spec = [re.sub('_all', '_S' + str(intHighest), line) for line in spec]
-        #     states = [re.findall('(\_S+\d+\:)', elem) for elem in spec]
-        #
-        # init = [re.findall('init\:',elem) for elem in spec]
-        # idxi = [i for i, x in enumerate(init) if len(x) > 0]
-        # idxs = [i for i, x in enumerate(states) if len(x) > 0]
-        # idx = idxi + idxs
-        #
-        # labelOfS = [spec[i] for i in idx]
-        # State = []
-        #
-        # # Track progress
-        # percentages = list(np.linspace(0, 100, np.size(idx)+1))
-        # percentages = percentages[1:]
-        #
-        # # Go through all States and find the conditions of transitions, the results of the conditions,
-        # # and the accepting states
-        # for i in range(np.size(idx)):
-        #     State.append(StatesOfI())
-        #     if i + 2 > np.size(idx):
-        #         condition = spec[idx[i] + 2:-2]
-        #         if np.size(condition) == 0:
-        #             try:
-        #                 condition = spec[idx[i] + 2:-2][0]
-        #             except:
-        #                 condition = spec[idx[i] + 2:-1][0]
-        #     else:
-        #         longRange = range(idx[i] + 2,idx[i + 1] - 2)
-        #         lengthOfR = longRange.stop - longRange.start
-        #         if lengthOfR >= 1:
-        #             condition = spec[idx[i] + 2:idx[i + 1] - 1]
-        #         else:
-        #             condition = spec[idx[i] + 2]
-        #
-        #     if np.size(condition) > 1:
-        #         splitcond = [re.split('\->+', elem) for elem in condition]
-        #     else:
-        #         try:
-        #             splitcond = re.split('\->+', condition)
-        #         except:
-        #             splitcond = re.split('\->+', condition[0])
-        #
-        #     for j in range(np.size(condition)):
-        #         if np.size(condition) > 1:
-        #             splitcondred = re.split(':+\s', splitcond[j][0], maxsplit=1)
-        #             try:
-        #                 ref = re.search('S+\d*', splitcond[j][1])[0]
-        #                 ref = ref + ':'
-        #             except:
-        #                 ref = re.search('init', splitcond[j][1])[0]
-        #                 ref = ref + ':'
-        #             splitcondred = re.sub("\&\&", "and", splitcondred[1])
-        #             splitcondred = re.sub("\|\|", "or", splitcondred)
-        #             State[i].cond.append(splitcondred)
-        #             location = [re.findall(ref, elem) for elem in labelOfS]
-        #
-        #             accepting = re.search('accept', splitcond[j][1])
-        #             results = [k for k, x in enumerate(location) if len(x) > 0]
-        #         else:
-        #             splitcondred = re.split(':+\s', splitcond[j], maxsplit=1)
-        #             try:
-        #                 ref = re.search('S+\d*', splitcond[1])[0]
-        #                 ref = ref + ':'
-        #             except:
-        #                 ref = re.search('init', splitcond[1])[0]
-        #                 ref = ref + ':'
-        #             splitcondred = re.sub("\&\&", "and", splitcondred[1])
-        #             splitcondred = re.sub("\|\|", "or", splitcondred)
-        #             State[i].cond.append(splitcondred)
-        #             location = [re.findall(ref, elem) for elem in labelOfS]
-        #
-        #             accepting = re.search('accept', splitcond[1])
-        #             results = [k for k, x in enumerate(location) if len(x) > 0]
-        #
-        #         State[i].result.append(results[0])
-        #         if accepting is not None:
-        #             self.accepting_states.append(State[i].result[j])
-        #
-        #     # Track Progress
-        #     percentage = round(percentages[i],2)
-        #     text1.configure(state='normal')
-        #     text1.delete("end-1l", "end")
-        #     text1.configure(state='disabled')
-        #     complete_status = str(percentage) + '% complete'
-        #     message = '\nPreparing specification. ' + complete_status
-        #     runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData,text1,master,message)
-        #
-        # # Object for each State
-        # self.State = State
-        # self.accepting_states = np.array(self.accepting_states)
-        # # Set of accepting States
-        # self.accepting_states = np.unique(self.accepting_states)
+
 
 
         # find intial value of proposiion and set that
@@ -319,24 +230,20 @@ class specInfo:
             percentages = list(np.linspace(0, 100,np.size(self.nodes, 0)+1))
             percentages = percentages[1:]
 
+
+
             for i in range(np.size(self.nodes, 0)):
                 for j in range(np.size(self.nodes, 0)):
                     if i != j:
-                        isect = []
-                        for k in range(np.size(self.map, 0)):
-                            isecttemp = self.intersectPoint(self.nodes[i, 0], self.nodes[i, 1], self.nodes[j, 0], self.nodes[j, 1],
-                                                            self.map[k, 0], self.map[k, 1], self.map[k, 2], self.map[k, 3])
-                            if isecttemp == 1:
-                                isect.append(isecttemp)
+                        isect = self.intersectPoint(self.nodes[i, 0], self.nodes[i, 1], self.nodes[j, 0], self.nodes[j, 1],
+                                                    self.map[:, 0], self.map[:, 1], self.map[:, 2],
+                                                    self.map[:, 3])
 
-                        if len(isect) == 0:
+                        if not np.any(isect):
                             pt1 = self.nodes[i,:]
                             pt2 = self.nodes[j,:]
-                            ptOfI1 = self.map[:, 0:2]
-                            ptOfI2 = self.map[:, 2:4]
-                            dist2closest1 = self.distWall(pt1, pt2, ptOfI1)
-                            dist2closest2 = self.distWall(pt1, pt2, ptOfI2)
-                            if min(dist2closest1) > .07 and min(dist2closest2) > .07:
+                            dist2closest1 = self.distWall(pt1, pt2, np.vstack((self.map[:, 0:2], self.map[:, 2:4])))
+                            if min(dist2closest1) > .07:
                                 nodeGraph[i, j] = np.sqrt(
                                     (self.nodes[i, 0] - self.nodes[j, 0]) ** 2 + (self.nodes[i, 1] - self.nodes[j, 1]) ** 2)
 
@@ -346,7 +253,10 @@ class specInfo:
                 text1.delete("end-1l", "end")
                 text1.configure(state='disabled')
                 complete_status = str(percentage) + '% complete'
-                message = '\nCreating Roadmap. ' + complete_status
+                if percentage != 100:
+                    message = '\nCreating Roadmap. ' + complete_status
+                else:
+                    message = '\nCreating Roadmap. ' + complete_status + '\n'
                 runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData,text1,master,message)
 
             self.nodeGraph = nodeGraph
@@ -387,7 +297,10 @@ class specInfo:
                 text1.delete("end-1l", "end")
                 text1.configure(state='disabled')
                 complete_status = str(percentage) + '% complete'
-                message = '\nFinding routes. ' + complete_status
+                if percentage != 100:
+                    message = '\nFinding routes. ' + complete_status
+                else:
+                    message = '\nFinding routes. ' + complete_status + '\n'
                 runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData,text1,master,message)
 
             self.nodeConnections = nodeConnections
@@ -401,46 +314,41 @@ class specInfo:
 
 
 
-    def intersectPoint(self,x1,y1,x2,y2,x3,y3,x4,y4):
-        denom = (y4-y3)*(x2-x1)-(x4-x3)*(y2-y1)
-        if denom == 0:
-            isect = 0
-        else:
-            ua = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3))/denom
-            ub = ((x2-x1)*(y1-y3) - (y2-y1)*(x1-x3))/denom
-
-            if ua >= 0 and ub >= 0 and ua <=1 and ub <=1:
-                isect = 1
-            else:
-                isect = 0
-        return isect
+    # def intersectPoint(self, x1, y1, x2, y2, x3, y3, x4, y4):
+    #     with np.errstate(divide='ignore', invalid='ignore'):
+    #         ua = np.divide(((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)), ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)))
+    #         ub = np.divide(((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)), ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)))
+    #
+    #         isect = (ua>=0)*(ub>=0)*(ua<=1)*(ub<=1)
+    #         return isect
 
     def distWall(self, p1, p2, pt):
         dx = p2[0] - p1[0]
         dy = p2[1] - p1[1]
 
-        t = ((pt[:,0] - p1[0]) * dx + (pt[:,1] - p1[1]) * dy) / (dx ** 2 + dy ** 2)
+        t = ((pt[:, 0] - p1[0]) * dx + (pt[:, 1] - p1[1]) * dy) / (dx ** 2 + dy ** 2)
 
         if dx == 0 and dy == 0:
             closestP = p1
             dx = pt[0] - p1[0]
             dy = pt[1] - p1[1]
-            dist = np.sqrt(dx ** 2 + dy ** 2) * np.ones((1,np.size(pt,0)))[0]
+            dist = np.zeros((1, np.size(pt, 0)))[0]
+            # dist = np.sqrt(dx ** 2 + dy ** 2) * np.ones((1,np.size(pt,0)))[0]
         else:
-            dist = np.zeros((1,np.size(pt,0)))[0]
+            dist = np.zeros((1, np.size(pt, 0)))[0]
 
         try:
-            indL = np.where(t<0)[0]
-            dx = pt[indL,0] - p1[0]
-            dy = pt[indL,1] - p1[1]
+            indL = np.where(t < 0)[0]
+            dx = pt[indL, 0] - p1[0]
+            dy = pt[indL, 1] - p1[1]
             dist[indL] = np.sqrt(dx ** 2 + dy ** 2)
         except:
             pass
 
         try:
-            indG = np.where(t>0)[0]
-            dx = pt[indG,0] - p1[0]
-            dy = pt[indG,1] - p1[1]
+            indG = np.where(t > 0)[0]
+            dx = pt[indG, 0] - p1[0]
+            dy = pt[indG, 1] - p1[1]
             dist[indG] = np.sqrt(dx ** 2 + dy ** 2)
         except:
             pass
@@ -450,8 +358,8 @@ class specInfo:
             dx = p2[0] - p1[0]
             dy = p2[1] - p1[1]
             closestP = np.array([p1[0] + t[indM] * dx, p1[1] + t[indM] * dy])
-            dx = pt[indM,0] - closestP[0]
-            dy = pt[indM,1] - closestP[1]
+            dx = pt[indM, 0] - closestP[0]
+            dy = pt[indM, 1] - closestP[1]
             dist[indM] = np.sqrt(dx ** 2 + dy ** 2)
         except:
             pass

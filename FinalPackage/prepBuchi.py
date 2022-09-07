@@ -3,6 +3,7 @@ import re
 import runEvBasedSTL
 import tkinter as tk
 import itertools
+import time
 
 class prep:
     def __init__(self,State,propositions,text1,master):
@@ -30,50 +31,33 @@ class prep:
         percentages = list(np.linspace(0, 100, np.size(self.State)+1))
         percentages = percentages[1:]
         reference = 0
-
         # Transform complex conditions for a transition to a set of  values (0,1,2). This will help with
         # evaluating at runtime
         totalTransitions = 0
-        for i in range(np.size(self.State)):
-            condCNF = []
-            for q in range(np.size(self.State[i].cond)):
-                column = []
-                for r in range(np.size(self.propositions)):
-                    column.append(0)
-                condCNF.append(column)
-            self.State[i].condCNF = condCNF
+        column = [0] * np.size(self.propositions)
 
+        for i in range(np.size(self.State)):
+            self.State[i].condCNF = np.size(self.State[i].cond) * [column]
             for j in range(np.size(self.State[i].cond)):
                 allRCond = np.zeros((1,np.size(self.propositions)),dtype = int)
                 optionsForTrans = re.split('or', self.State[i].cond[j])
                 for k in range(np.size(optionsForTrans)):
                     thisOption = re.split('and', optionsForTrans[k])
-                    valueOfProp = [re.search('not', elem) for elem in thisOption]
-
-                    CNFrep = []
-                    for p in range(np.size(valueOfProp)):
-                        if valueOfProp[p] is None:
-                            CNFrep.append(1)
-                        else:
-                            CNFrep.append(0)
+                    CNFrep = np.size(thisOption) * [1]
+                    for p in range(np.size(thisOption)):
+                        if 'not' in thisOption[p]:
+                            CNFrep[p] = 0
 
                     refNum = []
                     refProp = []
                     for l in range(np.size(self.propositions)):
-                        propo = self.propositions[l]
-                        propo = '\(props.' + propo+ '\)'
-                        locOfOption = [re.findall(propo, element) for element in thisOption]
-                        locOfOptionTemp = locOfOption
-                        for ll in range(np.size(locOfOptionTemp)):
-                            if locOfOptionTemp[ll] != []:
-                                refNum.append(l)
-                                refProp.append(ll)
-                                break
+                        propo = self.propositions[l]+')'
+                        if propo in optionsForTrans[k]:
+                            refNum.append(l)
+                            refProp.append(next(obj for obj, v in enumerate(thisOption) if propo in v))
 
                     finalPropVals = [np.inf] * np.size(self.propositions)
-                    for l in range(np.size(self.uncontrollableProp)):
-                        finalPropVals[l] = 2
-
+                    finalPropVals[0:np.size(self.uncontrollableProp)] = np.size(self.uncontrollableProp) *[2]
                     for l in range(np.size(refNum)):
                         finalPropVals[refNum[l]] = CNFrep[refProp[l]]
 
@@ -91,8 +75,6 @@ class prep:
                     else:
                         allRCond = np.vstack((allRCond, finalPropVals))
 
-
-
                 if np.size(allRCond,0) != 1:
                     allRCond = allRCond[1:]
 
@@ -101,7 +83,6 @@ class prep:
                 allRCond = allRCond.tolist()
 
                 self.State[i].condCNF[j] = allRCond
-
 
             # Update status of preparation
             percentage = round(percentages[i],2)

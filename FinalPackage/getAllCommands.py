@@ -196,7 +196,7 @@ class getAllCommands:
                     exec('props.' + propName + ' = ' '1')
                 if t > self.State.phi[i].interval[0] +inputTime and t < self.State.phi[i].interval[1] + inputTime:
                     propName = self.State.phi[i].prop_label
-                    if not eval('props.' + propName):
+                    if not eval('props.' + propName) and self.State.phi[i].until == 0:
                         raise Exception('SPECIFICATION VIOLATED: PARAMETER: {}, ACTUAL VALUE: {}, PROP LABEL: {}'
                                         .format(self.State.phi[i].params, eval(self.State.phi[i].funcOf),self.State.phi[i].prop_label))
             dir = re.findall('(?=\().+?(?=\*)', self.State.phi[i].funcOf)
@@ -248,7 +248,6 @@ class getAllCommands:
         # Go through all specifications and, if there is implication, log the time that the input became activated.
         # also, if a specification has been satisfied, the input should be reset.
         self.trackInputs(pos, posStart, posRef,t)
-
         # Evaluate the current state of the environment
         self.evalProps(pos, posRef, t)
         #Find Propositions to activate based on the current state and transitiosn to an accepting state
@@ -259,7 +258,7 @@ class getAllCommands:
         self.props2Activate = activate.props2Activate
         self.currState = activate.currState
         # Toggle to turn on/off pre failure warnings
-        preFailure = 1
+        preFailure = 0
         if preFailure:
             # this is for a pre-failure warning. We want to see what happens if things change with the inputs
             self.findConditions(activate)
@@ -384,7 +383,7 @@ class getAllCommands:
         self.nom = nom
 
     def getNom(self,phi, pos, nom):
-        avoidWallsInPath = 1
+        avoidWallsInPath = 0
         wallDistance = .05
         startPos = pos[3*(phi.robotsInvolved[0]-1):3 * (phi.robotsInvolved[0] - 1) + 2]
         canReach = 0
@@ -466,64 +465,66 @@ class getAllCommands:
 
         return nom, cost
 
-    def intersectPoint(self, x1, y1, x2, y2, x3, y3, x4, y4):
-        ua = np.divide(((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)), ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)))
-        ub = np.divide(((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)), ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)))
+    # def intersectPoint(self, x1, y1, x2, y2, x3, y3, x4, y4):
+    #     ua = np.divide(((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)), ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)))
+    #     ub = np.divide(((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)), ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)))
+    #
+    #     isect = (ua>=0)*(ub>=0)*(ua<=1)*(ub<=1)
+    #     return isect
+    #
+    # def intersectPointVec(self, x1, y1, x2, y2, x3, y3, x4, y4):
+    #     with np.errstate(divide='ignore', invalid='ignore'):
+    #         denom = np.outer((x2 - x1),(y4 - y3)) - np.outer((y2 - y1),(x4 - x3))
+    #
+    #         ua = np.divide(((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)), denom)
+    #         ub = (np.outer((x2 - x1), (y1 - y3)) - np.outer((y2 - y1), (x1 - x3)))/ denom
+    #
+    #         isect = (ua>=0)*(ub>=0)*(ua<=1)*(ub<=1)
+    #         isect = np.any(isect, axis=1)
+    #         isect = np.where(isect == False)[0]
+    #         return isect
 
-        isect = (ua>=0)*(ub>=0)*(ua<=1)*(ub<=1)
-        return isect
-
-    def intersectPointVec(self, x1, y1, x2, y2, x3, y3, x4, y4):
-        denom = np.outer((x2 - x1),(y4 - y3)) - np.outer((y2 - y1),(x4 - x3))
-
-        ua = np.divide(((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)), denom)
-        ub = (np.outer((x2 - x1), (y1 - y3)) - np.outer((y2 - y1), (x1 - x3)))/ denom
-
-        isect = (ua>=0)*(ub>=0)*(ua<=1)*(ub<=1)
-        isect = np.any(isect, axis=1)
-        isect = np.where(isect == False)[0]
-        return isect
-
-    def distWall(self, p1, p2, pt):
-        dx = p2[0] - p1[0]
-        dy = p2[1] - p1[1]
-
-        t = ((pt[:,0] - p1[0]) * dx + (pt[:,1] - p1[1]) * dy) / (dx ** 2 + dy ** 2)
-
-        if dx == 0 and dy == 0:
-            closestP = p1
-            dx = pt[0] - p1[0]
-            dy = pt[1] - p1[1]
-            dist = np.zeros((1,np.size(pt,0)))[0]
-            # dist = np.sqrt(dx ** 2 + dy ** 2) * np.ones((1,np.size(pt,0)))[0]
-        else:
-            dist = np.zeros((1,np.size(pt,0)))[0]
-
-        try:
-            indL = np.where(t<0)[0]
-            dx = pt[indL,0] - p1[0]
-            dy = pt[indL,1] - p1[1]
-            dist[indL] = np.sqrt(dx ** 2 + dy ** 2)
-        except:
-            pass
-
-        try:
-            indG = np.where(t>0)[0]
-            dx = pt[indG,0] - p1[0]
-            dy = pt[indG,1] - p1[1]
-            dist[indG] = np.sqrt(dx ** 2 + dy ** 2)
-        except:
-            pass
-
-        try:
-            indM = np.where((t >= 0) & (t <= 1))[0]
-            dx = p2[0] - p1[0]
-            dy = p2[1] - p1[1]
-            closestP = np.array([p1[0] + t[indM] * dx, p1[1] + t[indM] * dy])
-            dx = pt[indM,0] - closestP[0]
-            dy = pt[indM,1] - closestP[1]
-            dist[indM] = np.sqrt(dx ** 2 + dy ** 2)
-        except:
-            pass
-
-        return dist
+    # def distWall(self, p1, p2, pt):
+    #     with np.errstate(divide='ignore', invalid='ignore'):
+    #         dx = p2[0] - p1[0]
+    #         dy = p2[1] - p1[1]
+    #
+    #         t = ((pt[:,0] - p1[0]) * dx + (pt[:,1] - p1[1]) * dy) / (dx ** 2 + dy ** 2)
+    #
+    #         if dx == 0 and dy == 0:
+    #             closestP = p1
+    #             dx = pt[0] - p1[0]
+    #             dy = pt[1] - p1[1]
+    #             dist = np.zeros((1,np.size(pt,0)))[0]
+    #             # dist = np.sqrt(dx ** 2 + dy ** 2) * np.ones((1,np.size(pt,0)))[0]
+    #         else:
+    #             dist = np.zeros((1,np.size(pt,0)))[0]
+    #
+    #         try:
+    #             indL = np.where(t<0)[0]
+    #             dx = pt[indL,0] - p1[0]
+    #             dy = pt[indL,1] - p1[1]
+    #             dist[indL] = np.sqrt(dx ** 2 + dy ** 2)
+    #         except:
+    #             pass
+    #
+    #         try:
+    #             indG = np.where(t>0)[0]
+    #             dx = pt[indG,0] - p1[0]
+    #             dy = pt[indG,1] - p1[1]
+    #             dist[indG] = np.sqrt(dx ** 2 + dy ** 2)
+    #         except:
+    #             pass
+    #
+    #         try:
+    #             indM = np.where((t >= 0) & (t <= 1))[0]
+    #             dx = p2[0] - p1[0]
+    #             dy = p2[1] - p1[1]
+    #             closestP = np.array([p1[0] + t[indM] * dx, p1[1] + t[indM] * dy])
+    #             dx = pt[indM,0] - closestP[0]
+    #             dy = pt[indM,1] - closestP[1]
+    #             dist[indM] = np.sqrt(dx ** 2 + dy ** 2)
+    #         except:
+    #             pass
+    #
+    #         return dist

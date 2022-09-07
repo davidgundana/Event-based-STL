@@ -176,20 +176,20 @@ def getNom(State, pos, p):
         print('no path')
 
     return nom, dist2NextPoint, distx, disty, distTotal, nodes[int(rute[-1])]
-def intersectPoint( x1, y1, x2, y2, x3, y3, x4, y4):
-    denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
-    if denom == 0:
-        isect = 0
-    else:
-        ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom
-        ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom
-
-        if ua >= 0 and ub >= 0 and ua <= 1 and ub <= 1:
-            isect = 1
-        else:
-            isect = 0
-
-    return isect
+# def intersectPoint( x1, y1, x2, y2, x3, y3, x4, y4):
+#     denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
+#     if denom == 0:
+#         isect = 0
+#     else:
+#         ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom
+#         ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom
+#
+#         if ua >= 0 and ub >= 0 and ua <= 1 and ub <= 1:
+#             isect = 1
+#         else:
+#             isect = 0
+#
+#     return isect
 def distWall( p1, p2, pt):
     dx = p2[0] - p1[0]
     dy = p2[1] - p1[1]
