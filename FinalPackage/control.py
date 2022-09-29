@@ -70,7 +70,7 @@ def getAllNoms(piRobot, maxV, differential,sizeU):
     nominals = piRobot[0].nom[0,:]
     for j in range(np.size(piRobot)):
         if np.sum(abs(piRobot[j].nom[1, :])) != 0:
-            velBound = maxV[piRobot[j].nom[0, 0:].astype(int)]
+            # velBound = maxV[piRobot[j].nom[0, 0:].astype(int)]
             sumNom += piRobot[j].nom[1,:]
 
     nominals = np.vstack((nominals, sumNom))

@@ -83,8 +83,8 @@ def distWall(p1, p2, pt):
         return dist, closestP
 
 def feedbackLin(vx, vy, theta, epsilon,maxV):
-    R = np.array([[np.asscalar(np.cos(theta)), np.asscalar(np.sin(theta))], \
-                      [np.asscalar(-np.sin(theta)), np.asscalar(np.cos(theta))]])
+    R = np.array([[np.cos(theta), np.sin(theta)], \
+                      [-np.sin(theta), np.cos(theta)]])
     dirVelocities = np.array([[vx], [vy]])
     rot = np.array([[1.0, 0.0], [0.0, 1/epsilon]])
 

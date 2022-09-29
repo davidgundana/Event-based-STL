@@ -1,4 +1,12 @@
 /venv/
 /__pycache__/
+FinalPackage/__pycache__/
+FinalPackage/.idea
 FinalPackage/PickleFiles/RALspec6.pkl
 *.pkl
+*.iml
+*.xml
+*.xml
+*.iml
+FinalPackage/.idea/Final Package.iml
+FinalPackage/Anaconda3-2022.05-Linux-x86_64.sh

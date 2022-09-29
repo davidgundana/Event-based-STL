@@ -1,6 +1,7 @@
 import helperFuncs
 import numpy as np
 import re
+from math import fabs, pi
 
 def getNom(pi_mu, roadmap, x, xR, maxV,sizeU):
     nom = np.zeros((1,sizeU))
@@ -85,9 +86,44 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU):
 
     else:
         indOfI = int(re.search('(?<=\[)\d+(?=\])', pi_mu.dir[0])[0])
-        nominal = eval(str(pi_mu.point[0])) - x[indOfI]
+        goal = eval(str(pi_mu.point[0]))
+
+        if indOfI == 2:
+            goal = transform_to_pipi(goal)[0]
+            current = transform_to_pipi(x[indOfI])[0]
+            nominal = goal - current
+            if np.abs(nominal) > np.pi:
+                nominal = -1*nominal
+            print('HERE', goal, current)
+
+        else:
+            nominal = goal - x[indOfI]
+        # if nominal > np.pi:
+        #     nominal = x[indOfI] - eval(str(pi_mu.point[0]))
+
         if nominal > maxV[indOfI-1]:
             nominal = maxV[indOfI-1]
         nom[0,indOfI-1] = nominal
         cost = nominal
     return nom, cost
+
+def transform_to_pipi(input_angle):
+    revolutions = int((input_angle + np.sign(input_angle) * pi) / (2 * pi))
+
+    p1 = truncated_remainder(input_angle + np.sign(input_angle) * pi, 2 * pi)
+    p2 = (np.sign(np.sign(input_angle)
+                  + 2 * (np.sign(fabs((truncated_remainder(input_angle + pi, 2 * pi))
+                                      / (2 * pi))) - 1))) * pi
+
+    output_angle = p1 - p2
+
+    return output_angle, revolutions
+
+def truncated_remainder(dividend, divisor):
+    divided_number = dividend / divisor
+    divided_number = \
+        -int(-divided_number) if divided_number < 0 else int(divided_number)
+
+    remainder = dividend - divisor * divided_number
+
+    return remainder

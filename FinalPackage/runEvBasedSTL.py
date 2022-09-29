@@ -1,8 +1,16 @@
+#!/usr/bin/python3
+from NatNetClient import NatNetClient
+from util import quaternion_to_euler
 import numpy as np
 import tkinter as tk
 from tkinter import ttk
 import tkinter.filedialog
+from math import fabs, pi
 from scipy.io import savemat
+import stretch_body.robot
+# import rospy
+# import tf2_ros
+# import tf
 import parseEvBasedSTL
 import initializeSpec
 import prepBuchi
@@ -28,7 +36,8 @@ import forwardBuchi
 
 
 class formData:
-    def __init__(self):
+    def __init__(self,robot):
+        self.robot = robot
         self.M = 2 #Number of Robots
         self.N = 4  # Number of Inputs
         self.P = 1 #Number of Humans/dynamic obstacles
@@ -37,19 +46,26 @@ class formData:
         self.sizeState = 3
         self.sizeU = 5
         self.wheel2Center =.4
-        self.offsetX = .2
+        self.offsetX = -.025
+        self.armZero = .19
+        self.offsetZ = 0.08
+        self.running = True
         # Default spec location
         my_dir0 = os.path.dirname(os.path.abspath(__file__))
         my_dir2 = os.path.join(my_dir0, 'Specs', '')
-        my_dir3 = os.path.join(my_dir0, 'Maps', 'map.txt')
-        my_dir4 = os.path.join(my_dir0, 'Maps', 'nodes.txt')
+        my_dir2 = os.path.join(my_dir0, 'Specs', '')
+        my_dir3 = os.path.join(my_dir0, 'Maps', 'openMap.txt')
+        my_dir4 = os.path.join(my_dir0, 'Maps', 'openNodes.txt')
         my_dir = os.path.join(my_dir0, 'Specs', 'ICRA2023Spec4.txt')
         my_dir5 = os.path.join(my_dir0, 'Maps', 'mapNodes.pkl')
         my_dir6 = os.path.join(my_dir0, 'Maps', 'mapNodeConnections.pkl')
+        self.positions = {}
+        self.rotations = {}
+        self.objectPosition = {}
 
         #NRI ROUTE 1 DEFAULTS
-        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY]
-        self.default = np.array(['1', '5', '2,15,0.08,0.1,30', '1.8,1.8,.342,0,1,0', '17,2,0,0,1,17,12'])
+        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2]
+        self.default = np.array(['1', '5', '0.2,0.2,0.05,0.07,12', '1.8,1.8,.342,0,0,0', '0,0,0.025,0,1,17,12,0,0,0,0'])
         #NRI ROUTE 2 DEFAULTS
         # self.default = np.array(['1', '5', '1.5,1.5,15', '0.12,67.55,0', '0.12,62,0'])
         #
@@ -85,8 +101,8 @@ class formData:
         self.filename2 = my_dir2
         self.filename3 = my_dir3
         self.filename4 = my_dir4
-        self.filename5 = my_dir5
-        self.filename6 = my_dir6
+        self.filename5 = ''
+        self.filename6 = ''
         try:
             import spot
             self.bypassbuchi = 0
@@ -195,10 +211,64 @@ class formData:
                        variable=self.CheckVar2).grid(row=14,column=2,sticky=tk.W,pady=4)
         self.gamma = b_gamma
         specParams = [self.gamma, roadmap, master,text1]
+        import signal
+        signal.signal(signal.SIGINT, self.sigint_handler)
         tk.Button(master, text='Execute', command=(lambda e=specParams: self.runSpec(e))).grid(row=14, column=3, sticky=tk.W, pady=6)
         #master.destroy()
 
+    def receive_rigid_body_frame(self, id, position, rotation_quaternion):
+        # Position and rotation received
+        if id == 21 and position != []:
+            self.position = position
+            self.position += (self.robot.arm.status['pos'],)
+            self.position += (self.robot.lift.status['pos'],)
+            # print(rotation_quaternion)
+            # The rotation is in quaternion. We need to convert it to euler angles
+            newRot = (rotation_quaternion[2],rotation_quaternion[0],rotation_quaternion[1],rotation_quaternion[3])
+            rotx, roty, rotz = quaternion_to_euler(newRot)
+            # Store the roll pitch and yaw angles
+            self.rotations = (rotx, roty, rotz)
+        if id == 30 and position != []:
+            self.objectPosition = position
+
+    def transform_to_pipi(self,input_angle):
+        revolutions = int((input_angle + np.sign(input_angle) * pi) / (2 * pi))
+
+        p1 = self.truncated_remainder(input_angle + np.sign(input_angle) * pi, 2 * pi)
+        p2 = (np.sign(np.sign(input_angle)
+                      + 2 * (np.sign(fabs((self.truncated_remainder(input_angle + pi, 2 * pi))
+                                          / (2 * pi))) - 1))) * pi
+
+        output_angle = p1 - p2
+
+        return output_angle, revolutions
+
+    def truncated_remainder(self, dividend, divisor):
+        divided_number = dividend / divisor
+        divided_number = \
+            -int(-divided_number) if divided_number < 0 else int(divided_number)
+
+        remainder = dividend - divisor * divided_number
+
+        return remainder
+
     def runSpec(self, specParams):
+        clientAddress = "199.168.1.72"
+        optitrackServerAddress = "199.168.1.164"
+        robot_id = 21
+
+        # This will create a new NatNet client
+        streaming_client = NatNetClient()
+        streaming_client.set_client_address(clientAddress)
+        streaming_client.set_server_address(optitrackServerAddress)
+        streaming_client.set_use_multicast(True)
+        # Configure the streaming client to call our rigid body handler on the emulator to send data out.
+        streaming_client.rigid_body_listener = self.receive_rigid_body_frame
+
+        # Start up the streaming client now that the callbacks are set up.
+        # This will run perpetually, and operate on a separate thread.
+        is_running = streaming_client.run()
+
         self.psi = self.STL_list[0][0]
         self.psinew = self.STL_list[0][0]
         self.master = specParams[2]
@@ -300,27 +370,50 @@ class formData:
 
     def animation_data(self):
         self.t = 0
-        specattr = self.specattr
-        while self.t < 60:
+        time.sleep(1)
+        while self.running:
             if not self.pause:
+                print('--------------------------------------------------------------')
+                angle = self.transform_to_pipi((np.pi/180)*(self.rotations[2])+ pi/2)[0]
+                self.x[0]= self.position[2]
+                self.x[1] = self.position[0]
+                self.x[2] = angle
+                self.x[3] = self.position[3]
+                self.x[4] = self.position[4]
+                self.x[5] = self.robot.end_of_arm.status['stretch_gripper']['pos']
+                self.xR[0] = self.objectPosition[2]
+                self.xR[1] = self.objectPosition[0]
+                self.xR[2] = self.objectPosition[1] - self.offsetZ
+                #depot position
+                self.xR[5] = 0
+                self.xR[6] = 0
+                self.xR[7] = .15
+
+                # self.robot.end_of_arm.move_to('stretch_gripper', 30)
+
+                print('X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}'.format(round(self.x[0],2),round(self.x[1],2),round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),round(self.x[5],2)))
+                print('objectX: {}, objectY: {}, objectY: {}'.format(round(self.xR[0],2),round(self.xR[1],2),round(self.xR[2],2)))
+                # print(self.rotations)
                 theTime = time.time()
-                '''
+                '''fse.f
                 This Simulates the process 
                 '''
                 self.checkInputs()
                 self.updateRef()
                 nom, self.specattr = control.synthesis(self.specattr, self.potS, self.roadmap, self.x, self.xR, self.t, self.maxV, self.sizeState,self.sizeU, self.preFailure, self.text1, self.master)
-                self.specattr, self.potS = forwardBuchi.forward(self.specattr,self.potS)
+                # self.specattr, self.potS = forwardBuchi.forward(self.specattr,self.potS)
                 v = np.zeros((1, int(np.size(self.x)/self.sizeState)))
                 omega = np.zeros((1, int(np.size(self.x)/self.sizeState)))
                 deltaD = np.zeros((1, int(np.size(self.x)/self.sizeState)))
                 deltaZ = np.zeros((1, int(np.size(self.x)/self.sizeState)))
+                deltaGrip = np.zeros((1, int(np.size(self.x) / self.sizeState)))
 
                 for i in range(int(np.size(self.x)/self.sizeState)):
                     v[0, i] = nom[0][3 * i]
                     omega[0, i] = nom[0][3 * i + 1]
                     deltaD[0,i] = nom[0][3*i+2]
                     deltaZ[0,i] = nom[0][3*i+3]
+                    deltaGrip[0,i] = nom[0][3*i+4]
                 time.sleep(.02)
                 '''
                 End of process
@@ -332,12 +425,22 @@ class formData:
                 loopTime = elapsedT
 
                 for i in range(int(self.M)):
-                    d = v[0][i] * loopTime
-                    phi = omega[0][i] * loopTime
+                    d = v[0][i]
+                    phi = omega[0][i]
+                    vD = deltaD[0][i]
+                    vZ = deltaZ[0][i]
+                    vGrip = deltaGrip[0][i]
+                    print('Vd: {}, vOmega: {}, vD: {},vZ: {}, vGrip: {}'.format(d,phi,vD,vZ,vGrip))
+                    self.robot.base.set_velocity(v_m=d, w_r=phi)
+                    self.robot.arm.set_velocity(v_m=vD)
+                    self.robot.lift.set_velocity(v_m=vZ)
+                    self.robot.end_of_arm.move_by('stretch_gripper', vGrip)
+
+                    self.robot.push_command()
                     newPos = helperFuncs.integrateOdom([d,phi],self.x[3*i:3*i+3])
-                    self.x[3 * i:3 * i + 3] = newPos
-                    self.x[3*i+3] += deltaD[0][i] * loopTime
-                    self.x[3*i+4] += deltaZ[0][i] * loopTime
+                    # self.x[3 * i:3 * i + 3] = newPos
+                    # self.x[3*i+3] += deltaD[0][i] * loopTime
+                    # self.x[3*i+4] += deltaZ[0][i] * loopTime
 
             yield self.x
 
@@ -396,16 +499,18 @@ class formData:
                         self.specattr[i].input[2 * j + 1] = self.t
                 else:
                     self.specattr[i].input[2 * j] = 0
-        print(self.specattr[i].input)
         # Check to see what if inputs have changed
 
     def updateRef(self):
-        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY]
+        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2]
         # xy is on front face of robot. arm is in offsetX
         centroidPoint = helperFuncs.robot2global(self.x[0:3], [-self.offsetX, 0])
 
         self.xR[3] = np.arctan2(self.xR[1]-centroidPoint[1],self.xR[0]-centroidPoint[0]) + np.pi/2
-        self.xR[4] = np.sqrt((self.x[0]-self.xR[0])**2 + (self.x[1]-self.xR[1])**2)
+        self.xR[3] = self.transform_to_pipi(self.xR[3])[0]
+        #print(self.xR[3])
+        self.xR[4] = np.sqrt((self.x[0]-self.xR[0])**2 + (self.x[1]-self.xR[1])**2) - self.armZero
+        self.xR[8] = np.sqrt((self.x[0]-self.xR[5])**2 + (self.x[1]-self.xR[6])**2) - self.armZero
 
     def modifySpec(self):
         newSTL = self.PsiSTLnew.get("1.0",tk.END)
@@ -578,7 +683,7 @@ class formData:
         tk.Checkbutton(master, text='Bypass?', highlightbackground='orange', command=self.enableBypass,
                        variable=self.CheckVar).grid(row=6,column=1,sticky=tk.W,pady=4)
 
-        tk.Button(master, text='Quit', highlightbackground='orange', command=master.quit).grid(row=14,
+        tk.Button(master, text='Quit', highlightbackground='orange', command=master.destroy).grid(row=14,
                                             column=0,sticky=tk.W,pady=4)
         results = np.array([e1, e2, e3,e4,e5,text1,master])
 
@@ -612,328 +717,39 @@ class formData:
             raise IndexError("No matching opening parens at: " + str(pstack.pop()))
 
         return toret
-class cmdInp:
-    def __init__(self):
-        self.posX = []
-        self.posY = []
-        self.posTheta = []
-        self.posXinit = []
-        self.posYinit = []
-        self.posThetainit = []
-        self.posXPerson = []
-        self.posYPerson = []
-        self.posThetaPerson = []
-        self.currTime = 0
-        self.startTime = 0
-        self.currState = 0
-        self.input = []
-        self.until = []
-    def getInputs(self,f):
-        # DEBUG MESSAGE MODE TOGGLE
-        # Turn this value to "1" if you want to enter an example message from Unity/Matlab as an input. Otherwise, inputs
-        # above will be used
-        debugMessage = 0
 
-        if not debugMessage:
-            for i in range(int(f.M)):
-                self.posX = np.append(self.posX,f.initPos[3*i])
-                self.posY = np.append(self.posY, f.initPos[3 * i + 1])
-                self.posTheta = np.append(self.posTheta, f.initPos[3 * i + 2])
-            for i in range(int(f.P)):
-                self.posXPerson = np.append(self.posXPerson,f.initPosRef[3*i])
-                self.posYPerson = np.append(self.posYPerson, f.initPosRef[3 * i + 1])
-                self.posThetaPerson = np.append(self.posThetaPerson, f.initPosRef[3 * i + 2])
-
-            self.posXinit = self.posX
-            self.posYinit = self.posY
-            self.posThetainit = self.posTheta
-            self.input = np.zeros((1,2*f.N), dtype=float)[0]
-
-        else:
-            # Example message from Unity/Matlab
-            Mes = '-139.3526 -14.82436 157.7747 -157.64 63.38 0 -135.8176 -23.47556 1.400012 70.28 0 1 0 0 1 62.04'
-            parsedMes = Mes.split()
-            for i in range(int(f.M)):
-                self.posX = np.append(self.posX, float(parsedMes[3 * i]))
-                self.posY = np.append(self.posY, float(parsedMes[3 * i + 1]))
-                self.posTheta = np.append(self.posTheta, float(parsedMes[3 * i + 2]))
-            for i in range(int(f.M)):
-                self.posXinit = np.append(self.posXinit,float(parsedMes[3 * i + 3 * f.M]))
-                self.posYinit = np.append(self.posYinit,float(parsedMes[3 * i + 1 + 3 * f.M]))
-                self.posThetainit = np.append(self.posThetainit,float(parsedMes[3 * i + 2 + 3 * f.M]))
-            for i in range(f.P):
-                self.posXPerson = np.append(self.posXPerson, float(parsedMes[3 * i + 6 * f.M]))
-                self.posYPerson = np.append(self.posYPerson,  float(parsedMes[3 * i + 1 + 6 * f.M]))
-                self.posThetaPerson = np.append(self.posThetaPerson, float(parsedMes[3 * i + 2 + 6 * f.M]))
-
-            self.currTime = float(parsedMes[6 * f.M + 3 * f.P])
-            self.startTime = float(parsedMes[6 * f.M + 1 + 3 * f.P])
-            self.currState = int(float(parsedMes[6 * f.M + 2 + 3 * f.P]))
-
-            inputs = list(map(float, parsedMes[6 * f.M + 3 + 3 * f.P:]))
-            self.input = np.append(self.input, inputs)
-
-
-
+    def sigint_handler(self,sig,frame):
+        print('made it to close')
+        self.running = False
+        self.master.destroy()
 
 if __name__ == "__main__":
-    loadOnStart = 0]
+    loadOnStart = 0
+    robot = stretch_body.robot.Robot()
+    robot.startup()
+    robot.end_of_arm.move_to('wrist_yaw', 0)
+    robot.end_of_arm.move_to('stretch_gripper', 30)
+    robot.lift.move_to(1)
+    robot.arm.move_to(0)
+    robot.push_command()
 
-
-
-
-
-    
-    if loadOnStart == 0:
-        f = formData()
+    try:
+        f = formData(robot)
         f.makeForm()
         tk.mainloop()
-        print('here')
-        if f.ready:
-            filename = f.name
-            filePathP = 'PickleFiles/'+filename+'.pkl'
-            filePathM = 'MatlabFiles/'+filename+'.mat'
-            my_dir = os.path.dirname(os.path.abspath(__file__))
-            pickle_file_path = os.path.join(my_dir, filePathP)
+    except:
+        pass
+    finally:
+        # Stop the robot
+        print('Stopping robot')
+        robot.base.set_velocity(v_m=0, w_r=0)
+        robot.push_command()
+        robot.end_of_arm.move_to('stretch_gripper', 25)
 
-            with open(pickle_file_path, 'wb') as output:
-                pickle.dump(f, output, pickle.DEFAULT_PROTOCOL)
+        time.sleep(2)
+        robot.base.set_velocity(v_m=0, w_r=0)
+        robot.push_command()
+        print('robot stopped!')
 
-            I = cmdInp()
-            I.getInputs(f)
-            # Save matlab file
-            dict = {"freq":float(f.freq), "robots":f.M,"humans":f.P,"init_robot":f.initPos,"init_human":f.initPosRef,
-                    "input":np.zeros((1,2*f.N))[0],"map":f.map,"inputNames":f.State.uncontrollableProp,"nodes":f.nodes}
-            savemat(filePathM, dict)
-    elif loadOnStart == 1:
-        my_dir = os.path.dirname(os.path.abspath(__file__))
-        pickle_file_path = os.path.join(my_dir, 'PickleFiles', 'RALspec1.pkl')
-        with open(pickle_file_path, 'rb') as input:
-            f = pickle.load(input)
-        #Get the inputs for the function to get robot commands. Inputs can be from gui or from a copied message
-        I = cmdInp()
-        I.getInputs(f)
+    print('finished')
 
-    ### Going to develop non NRI experiment setup to increase speed and efficiency.
-
-
-
-    ### End NRI Code
-
-
-
-
-
-
-    runOnce = 1
-    if runOnce and f.ready:
-        debug = 0
-        if debug:
-            t = time.time()
-            vx, vy, vtheta, I.currState, distTotal, newinput, I.until = getCMD(f,I.posX,I.posY,I.posTheta,I.posXinit,I.posYinit,
-                I.posThetainit,I.posXPerson,I.posYPerson,I.posThetaPerson,I.currTime,I.startTime,I.currState, I.input,I.until)
-            elapsedT = time.time() - t
-
-            I.input = newinput
-            print(elapsedT)
-
-            print(vx,vy)
-            time.sleep(.1)
-        else:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            walls = f.map
-
-            xwall = []
-            ywall = []
-            for i in range(np.size(f.map,0)):
-                xwall.append(f.map[i,0])
-                xwall.append(f.map[i, 2])
-                xwall.append(None)
-                ywall.append(f.map[i,1])
-                ywall.append(f.map[i, 3])
-                ywall.append(None)
-
-            plt.ion()
-            plt.show()
-            ax.plot(xwall, ywall, color="black")
-
-            # xScale = 1.1217
-            # yScale = .9143
-            # rect = []
-            # rect.append(patches.Rectangle((-1.66*xScale,1.2*yScale),.86*xScale,.3*yScale, linewidth=1, edgecolor='k', facecolor='black'))
-            # rect.append(
-            #     patches.Rectangle((-1.66*xScale,0.6*yScale),.86*xScale,.3*yScale, linewidth=1, edgecolor='k',
-            #                       facecolor='black'))
-            # rect.append(
-            #     patches.Rectangle((-1.75*xScale,-.25*yScale),1*xScale,.25*yScale, linewidth=1, edgecolor='k',
-            #                       facecolor='black'))
-            # rect.append(
-            #     patches.Rectangle((-1.75*xScale,-.75*yScale),.25*xScale,.25*yScale, linewidth=1, edgecolor='k',
-            #                       facecolor='black'))
-            # rect.append(
-            #     patches.Rectangle((-1*xScale,-.75*yScale),.25*xScale,.25*yScale, linewidth=1, edgecolor='k',
-            #                       facecolor='black'))
-            # rect.append(
-            #     patches.Rectangle((-.2*xScale,-.75*yScale),.3*xScale,1.25*yScale, linewidth=1, edgecolor='k',
-            #                       facecolor='black'))
-            # rect.append(
-            #     patches.Rectangle((.5*xScale,-.75*yScale),.75*xScale,.3*yScale, linewidth=1, edgecolor='k',
-            #                       facecolor='black'))
-            # rect.append(
-            #     patches.Rectangle((.5*xScale,-.15*yScale),.25*xScale,.25*yScale, linewidth=1, edgecolor='k',
-            #                       facecolor='black'))
-            # rect.append(
-            #     patches.Rectangle((-.1*xScale,1*yScale),.2*xScale,.75*yScale, linewidth=1, edgecolor='k',
-            #                       facecolor='black'))
-            # rect.append(
-            #     patches.Rectangle((.4*xScale,1*yScale),.2*xScale,.75*yScale, linewidth=1, edgecolor='k',
-            #                       facecolor='black'))
-            # rect.append(
-            #     patches.Rectangle((1.33*xScale,.5*yScale),.33*xScale,1*yScale, linewidth=1, edgecolor='k',
-            #                       facecolor='black'))
-            #
-            # for i in range(np.size(rect)):
-            #     ax.add_patch(rect[i])
-
-            dispRoadmap = 0
-            if dispRoadmap:
-                xNodes = []
-                yNodes = []
-                for i in range(np.size(f.State.nodeGraph, 0)):
-                    for j in range(np.size(f.State.nodeGraph, 1)):
-                        if f.State.nodeGraph[i, j] > 0:
-                            xLine = [f.State.nodes[i, 0], f.State.nodes[j, 0]]
-                            yLine = [f.State.nodes[i, 1], f.State.nodes[j, 1]]
-                            ax.plot(xLine, yLine, color="red")
-            plt.draw()
-            plt.pause(0.001)
-            robots = {}
-            colors = ["red", "blue", "blue", "green", "green"]
-            if f.M == 7:
-                colors = ["red", "blue", "blue", "blue","green","green","green"]
-            if f.M == 9:
-                colors = ["red", "blue", "blue","green","green","black","black","cyan","cyan"]
-
-            shapes = ['o','^','s']
-            for i in range(f.M):
-                robots[str(i)] = ax.plot(f.initPos[3*i],f.initPos[3*i+1], marker=shapes[0], markersize=3, color=colors[i])
-
-            # circle1 = plt.Circle((f.initPosRef[3], f.initPosRef[4]), 0.75, color='r', fill=False)
-            # circle2 = plt.Circle((f.initPosRef[6], f.initPosRef[7]), 0.75, color='r', fill=False)
-            # ax.add_patch(circle1)
-            # ax.add_patch(circle2)
-
-            plt.draw()
-            plt.pause(0.001)
-
-        posX = []
-        posY = []
-        posTheta = []
-        posPX = []
-        posPY = []
-        posPTheta = []
-        for i in range(int(f.M)):
-            posX = np.append(posX, float(f.initPos[3 * i]))
-            posY = np.append(posY, float(f.initPos[3 * i + 1]))
-            posTheta = np.append(posTheta, float(f.initPos[3 * i + 2]))
-        for i in range(int(f.P)):
-            posPX = np.append(posPX, float(f.initPosRef[3 * i]))
-            posPY = np.append(posPY, float(f.initPosRef[3 * i + 1]))
-            posPTheta = np.append(posPTheta, float(f.initPosRef[3 * i + 2]))
-        realTime = 0
-        hz = .1
-        if realTime:
-            startTime = time.time()
-            runTime = time.time()-startTime
-        else:
-            runTime = 0
-
-        currState = 0
-        input = I.input
-        allTimes = []
-        while runTime < 30:
-            loopStart = time.time()
-            if runTime > 1:
-                input[0] = 1
-                input[1] = 1
-            if runTime > 3:
-                input[0] = 0
-                input[1] = 0
-            if runTime > 2:
-                input[2] = 1
-                input[3] = 2
-            if runTime > 5:
-                input[2] = 0
-                input[3] = 0
-            # if runTime > 7:
-            #     input[2] = 1
-            #     input[3] = 7
-            #     posPX[0] = 2
-            #     posPY[0] = -1
-            # if runTime > 9:
-            #     input[2] = 0
-            #     input[3] = 0
-            if f.N > 2:
-                if runTime > 4:
-                    input[4] = 1
-                    input[5] = 4
-                if runTime > 5:
-                    input[4] = 0
-                    input[5] = 0
-            if f.N > 3:
-                if runTime > 7:
-                    input[6] = 1
-                    input[7] = 7
-                if runTime > 9:
-                    input[6] = 0
-                    input[7] = 0
-
-            vx, vy, vtheta, currState, distTotal, newInput, I.until = getCMD(f, posX, posY, posTheta,
-                                                                               I.posXinit, I.posYinit,
-                                                                               I.posThetainit, posPX,
-                                                                               posPY, posPTheta,
-                                                                               runTime, 0, currState,
-                                                                               input, I.until)
-            # print(vx[0],vy[0])
-            loopTime = time.time()-loopStart
-            input = newInput
-            allTimes.append(loopTime)
-
-            for i in range(f.M):
-                rob = robots[str(i)].pop(0)
-                rob.remove()
-
-            #update positions
-            if not realTime:
-                loopTime = hz
-            for i in range(int(f.M)):
-                posX[i] = posX[i] + vx[0][i] * loopTime
-                posY[i] = posY[i] + vy[0][i] * loopTime
-                posTheta[i] = posTheta[i] + vtheta[0][i] * loopTime
-                robots[str(i)] = ax.plot(posX[i],posY[i], marker=shapes[0], markersize=3, color=colors[i])
-
-            # Hard Code pos of human and spills for experiment
-            posPX[0] = posX[0]
-            posPY[0] = posY[0]
-            posPTheta[0] = posTheta[0]
-
-            if realTime:
-                runTime = time.time()-startTime
-            else:
-                runTime += hz
-            plt.title("Time: " + str(round(runTime,2)) + "s")
-            plt.draw()
-            plt.pause(0.001)
-
-        avgT = np.average(allTimes)
-        maxT = np.max(allTimes)
-        minT = np.min(allTimes)
-
-        print("Average Computation time: " + str(avgT) + "s")
-        print("Max Computation time: " + str(maxT) + "s")
-        print("Min Computation time: " + str(minT) + "s")
-
-
-        for i in range(np.size(f.map,0)):  # looping statement;declare the total number of frames
-            plt.pause(0.1)
