@@ -85,8 +85,18 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU):
         nom[0,0:2] = newNom
 
     else:
-        indOfI = int(re.search('(?<=\[)\d+(?=\])', pi_mu.dir[0])[0])
-        goal = eval(str(pi_mu.point[0]))
+
+        if np.size(pi_mu.point) > 0:
+            indOfI = int(re.search('(?<=\[)\d+(?=\])', pi_mu.dir[0])[0])
+            goal = eval(str(pi_mu.point[0]))
+        else:
+            try:
+                indOfI = int(re.search('(?<=\[)\d+(?=\])', pi_mu.dir)[0])
+                goal = pi_mu.p + pi_mu.signFS[0]*1
+            except:
+                print('here')
+
+
 
         if indOfI == 2:
             goal = transform_to_pipi(goal)[0]
@@ -94,7 +104,6 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU):
             nominal = goal - current
             if np.abs(nominal) > np.pi:
                 nominal = -1*nominal
-            print('HERE', goal, current)
 
         else:
             nominal = goal - x[indOfI]

@@ -171,6 +171,19 @@ def evalProps(specattr, roadmap, x,xR,t,maxV,sizeU):
         for j in range(len(specattr[i].Pi_mu)):
             specattr[i].Pi_mu[j].currentTruth = eval(specattr[i].Pi_mu[j].prop_label, {'__builtins__': None},
                                  {'props': props})
+            if specattr[i].Pi_mu[j].type == 'ev':
+                if not specattr[i].Pi_mu[j].t_e == []:
+                    inputTime = specattr[i].Pi_mu[j].t_e
+                    if t >= specattr[i].Pi_mu[j].a + inputTime and t <= specattr[i].Pi_mu[j].b + inputTime and specattr[i].Pi_mu[j].currentTruth:
+                        specattr[i].Pi_mu[j].satisfied = 1
+                try:
+                    if specattr[i].Pi_mu[j].satisfied:
+                        exec(specattr[i].Pi_mu[j].prop_label + '=1')
+                except:
+                    pass
+
+            # if not(specattr[i].Pi_mu[j].currentTruth and specattr[i].Pi_mu[j].type == 'ev'):
+
             if specattr[i].Pi_mu[j].currentTruth:
                 nomR = np.zeros((1, 3), dtype=float)[0]
                 cost = eval(specattr[i].Pi_mu[j].hxt)

@@ -8,6 +8,8 @@ def barrier(pi, x,xR, t, wall, roadmap, preF):
         inputTime = 0
     else:
         inputTime = pi.t_e
+    # if pi.id == 7:
+    #     print('here')
     if pi.type == 'ev':
         # If the interval has passed, then the barrier function doesnt matter
         if t >= pi.a + inputTime and t <= pi.b + inputTime and not pi.currentTruth:
@@ -31,7 +33,7 @@ def totalBarrier(specattr, ind, indOfActive):
     for i in range(np.size(indOfActive,0)):
         if np.any(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].robotsInvolved== ind):
             try:
-                if not (specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].type == 'ev' and specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].currentTruth):
+                if (specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].type == 'ev' and not specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].currentTruth):
                     if specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].bxt_i is not None:
                         bxt_i.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].bxt_i)
                         piRobot.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]])

@@ -258,7 +258,9 @@ def timingFromRight(mu,psi):
     a_b_split = re.split(',',a_b)
     a = float(a_b_split[0])
     b = float(a_b_split[1])
-    type =  re.findall(r'(alw|ev|un)', timingLoc)[0]
+    type = 'alw'
+    # type =  re.findall(r'(alw|ev|un)', timingLoc)[0]
+
 
     return a, b, type
 
@@ -271,7 +273,8 @@ def timingFromLeft(mu,psi):
     a = float(a_b_split[0])
     b = float(a_b_split[1])
     type =  re.findall(r'(alw|ev|un)', timingLoc)[-1]
-
+    if type == 'un':
+        type = 'ev'
     return a,b,type
 
 def findEvents(mu, parseTree):
@@ -622,6 +625,7 @@ class abstractedPred:
         else:
             self.nom[0:] = np.arange(self.sizeU * (np.floor(self.robotsInvolved[0]/self.sizeU)), self.sizeU * (np.floor(self.robotsInvolved[0]/self.sizeU)) + self.sizeU)
             self.nom[1:] = self.sizeU *[0]
+            self.dir = self.hxt
 
 class spec:
     def __init__(self,spec,accepting,inpRef,inpLabels, evProps):

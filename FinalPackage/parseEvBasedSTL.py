@@ -150,3 +150,4 @@ class Parsed:
             self.nom[0:] = [3*self.robotsInvolved[0]-3,3*self.robotsInvolved[0]-2,3*self.robotsInvolved[0]-1]
             self.nom[1:] = [0, 0, 0]
 
+

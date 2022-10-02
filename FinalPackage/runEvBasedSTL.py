@@ -61,7 +61,7 @@ class formData:
 
         #NRI ROUTE 1 DEFAULTS
         # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2]
-        self.default = np.array(['1', '5', '0.2,0.2,0.05,0.07,12', '1.8,1.8,.342,0,0,0', '0,0,0.025,0,1,17,12,0,0,0,0'])
+        self.default = np.array(['1', '5', '0.2,0.2,0.05,0.07,12', '1.8,1.8,.342,0,0,75', '0,0,0.025,0,-2,-2,-2,0,0,0,0'])
         #NRI ROUTE 2 DEFAULTS
         # self.default = np.array(['1', '5', '1.5,1.5,15', '0.12,67.55,0', '0.12,62,0'])
 
@@ -355,8 +355,8 @@ class formData:
                     self.xR[1] = self.objectPosition[0]
                     self.xR[2] = self.objectPosition[1] - self.offsetZ
                     #depot position
-                    self.xR[5] = 0
-                    self.xR[6] = 0
+                    self.xR[5] = -2
+                    self.xR[6] = -2
                     self.xR[7] = .15
 
                 print('X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}'.format(round(self.x[0],2),round(self.x[1],2),round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),round(self.x[5],2)))
@@ -411,6 +411,7 @@ class formData:
                         self.x[3 * i:3 * i + 3] = newPos
                         self.x[3*i+3] += deltaD[0][i] * loopTime
                         self.x[3*i+4] += deltaZ[0][i] * loopTime
+                        self.x[3*i+5] += deltaGrip[0][i] * loopTime
 
             yield self.x
 
@@ -695,7 +696,7 @@ class formData:
         self.master.destroy()
 
 if __name__ == "__main__":
-    realRobots = 1
+    realRobots = 0
     if realRobots:
         import stretch_body.robot
         robot = stretch_body.robot.Robot()
