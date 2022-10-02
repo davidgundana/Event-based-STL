@@ -350,7 +350,7 @@ class formData:
                     self.x[2] = angle
                     self.x[3] = self.position[3]
                     self.x[4] = self.position[4]
-                    self.x[5] = self.robot.end_of_arm.status['stretch_gripper']['pos']
+                    self.x[5] = self.robot.end_of_arm.status['stretch_gripper']['pos_pct']
                     self.xR[0] = self.objectPosition[2]
                     self.xR[1] = self.objectPosition[0]
                     self.xR[2] = self.objectPosition[1] - self.offsetZ
@@ -695,16 +695,20 @@ class formData:
         self.master.destroy()
 
 if __name__ == "__main__":
-    realRobots = 0
+    realRobots = 1
     if realRobots:
         import stretch_body.robot
         robot = stretch_body.robot.Robot()
         robot.startup()
         robot.end_of_arm.move_to('wrist_yaw', 0)
-        robot.end_of_arm.move_to('stretch_gripper', 30)
+        robot.end_of_arm.move_to('stretch_gripper', 60)
         robot.lift.move_to(1)
         robot.arm.move_to(0)
         robot.push_command()
+        # while True:
+        #     print(robot.end_of_arm.status['stretch_gripper']['pos_pct'])
+        #     robot.end_of_arm.move_by('stretch_gripper', -2)
+        #     time.sleep(.5)
     else:
         robot = None
 

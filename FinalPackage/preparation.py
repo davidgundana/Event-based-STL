@@ -621,7 +621,7 @@ class abstractedPred:
             self.nom[1:] = self.sizeU *[0]
         else:
             self.nom[0:] = np.arange(self.sizeU * (np.floor(self.robotsInvolved[0]/self.sizeU)), self.sizeU * (np.floor(self.robotsInvolved[0]/self.sizeU)) + self.sizeU)
-            self.nom[1:] = self.sizU *[0]
+            self.nom[1:] = self.sizeU *[0]
 
 class spec:
     def __init__(self,spec,accepting,inpRef,inpLabels, evProps):
