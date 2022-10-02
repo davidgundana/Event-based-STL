@@ -7,10 +7,6 @@ from tkinter import ttk
 import tkinter.filedialog
 from math import fabs, pi
 from scipy.io import savemat
-import stretch_body.robot
-# import rospy
-# import tf2_ros
-# import tf
 import parseEvBasedSTL
 import initializeSpec
 import prepBuchi
@@ -68,34 +64,6 @@ class formData:
         self.default = np.array(['1', '5', '0.2,0.2,0.05,0.07,12', '1.8,1.8,.342,0,0,0', '0,0,0.025,0,1,17,12,0,0,0,0'])
         #NRI ROUTE 2 DEFAULTS
         # self.default = np.array(['1', '5', '1.5,1.5,15', '0.12,67.55,0', '0.12,62,0'])
-        #
-        #
-        # # 2 robots
-        # self.default = np.array(
-        #     ['2', '5', '1, 1 ,15,1, 1 ,15', '1.8,1.8,15,1.8,8,15', '1.8,1.8,15,1.8,8,15'])
-
-        # 3 robots
-        # self.default = np.array(
-        #     ['3', '5', '.25, .25 ,15,.25, .25 ,15,.25, .25 ,15', '1.8,-1.25,15,-.7,-.3,15,-.7,.77,15', '-1.8,-1.25,0,1.9,0.3,0'])
-
-        # 5 robots(physical)
-        # self.default = np.array(
-        #     ['5', '5', '.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15,.25, .25 ,15', '1.8,-1.25,15,-.7,-.3,15,-.7,.77,15,-.4,-.8,15,.4,-.8,15', '-1.8,-1.25,0,1.9,0.3,0,-1.35,-.8,0'])
-
-        # 5 robots
-        # self.default = np.array(
-        #     ['5', '5', '.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15', '1.75,-1.25,15,-.6,1,0,-.6,-.4,0,-.3,-1,0,.3,-1,0', '-1.7,-2,0,1.75,.4,0,-1.5,.5,0,1.7,-.5,0'])
-
-        # 7 robots
-        # self.default = np.array(
-        #     ['7', '5', '.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15',
-        #      '1.75,-1.25,15,-.6,1,0,-.6,-.4,0,-.3,-1,0,.3,-1,0, 1.5, -.5,0,1.8,-.5,0', '-1.7,-2,0,1.75,.4,0,-1.5,.5,0,1.7,-.5,0'])
-        #
-        # # 9 robots
-        # self.default = np.array(
-        #     ['9', '5', '.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15,.5, .5 ,15',
-        #      '1.75,-1.25,15,-.6,1,0,-.6,-.4,0,-.3,-1,0,.3,-1,0, 1.5, -.5,0,1.8,-.5,0,-1.5,-1,0,-1,-1,0', '-1.7,-2,0,1.75,.4,0,-1.5,.5,0'])
-
 
         self.filename1 = my_dir  # Directory of Specification
         self.filename2 = my_dir2
@@ -193,8 +161,8 @@ class formData:
 
         # Initialize Set of Buchis and potential states
         # Run prepare Spec
-        Pi_mu, psi, inpRef, inpLabels,evProps = prep.prepSpec(psi,self.sizeState, self.sizeU)
-        b_gamma = prep.getBuchi(Pi_mu,psi, self.filename2, text1, master, inpRef, inpLabels,evProps )
+        Pi_mu, psi, inpRef, inpLabels,evProps,gamma = prep.prepSpec(psi,self.sizeState, self.sizeU)
+        b_gamma = prep.getBuchi(Pi_mu,psi, self.filename2, text1, master, inpRef, inpLabels,evProps,gamma )
         self.psiRef = psi
         # b_gamma = prep.prepSpec(psi, self.filename2, text1, master,self.sizeState, self.sizeU,1)
 
@@ -253,21 +221,21 @@ class formData:
         return remainder
 
     def runSpec(self, specParams):
-        clientAddress = "199.168.1.72"
-        optitrackServerAddress = "199.168.1.164"
-        robot_id = 21
+        if self.robot is not None:
+            clientAddress = "199.168.1.72"
+            optitrackServerAddress = "199.168.1.164"
 
-        # This will create a new NatNet client
-        streaming_client = NatNetClient()
-        streaming_client.set_client_address(clientAddress)
-        streaming_client.set_server_address(optitrackServerAddress)
-        streaming_client.set_use_multicast(True)
-        # Configure the streaming client to call our rigid body handler on the emulator to send data out.
-        streaming_client.rigid_body_listener = self.receive_rigid_body_frame
+            # This will create a new NatNet client
+            streaming_client = NatNetClient()
+            streaming_client.set_client_address(clientAddress)
+            streaming_client.set_server_address(optitrackServerAddress)
+            streaming_client.set_use_multicast(True)
+            # Configure the streaming client to call our rigid body handler on the emulator to send data out.
+            streaming_client.rigid_body_listener = self.receive_rigid_body_frame
 
-        # Start up the streaming client now that the callbacks are set up.
-        # This will run perpetually, and operate on a separate thread.
-        is_running = streaming_client.run()
+            # Start up the streaming client now that the callbacks are set up.
+            # This will run perpetually, and operate on a separate thread.
+            is_running = streaming_client.run()
 
         self.psi = self.STL_list[0][0]
         self.psinew = self.STL_list[0][0]
@@ -312,6 +280,7 @@ class formData:
         self.robots = {}
         self.robotArc = {}
         self.robotArm = {}
+        self.objects = {}
 
         self.cm = plt.get_cmap('jet')
         for i in range(f.M):
@@ -344,7 +313,7 @@ class formData:
             ywall.append(None)
         # plt.ion()
         ax.plot(xwall, ywall, color="black")
-        ax.plot(self.initXRef[0], self.initXRef[1],'o', color="blue")
+        self.objects, = ax.plot(self.initXRef[0], self.initXRef[1],'o', color="blue")
         self.x = self.initX
         self.xR = self.initXRef
         self.potS = [0]
@@ -374,28 +343,27 @@ class formData:
         while self.running:
             if not self.pause:
                 print('--------------------------------------------------------------')
-                angle = self.transform_to_pipi((np.pi/180)*(self.rotations[2])+ pi/2)[0]
-                self.x[0]= self.position[2]
-                self.x[1] = self.position[0]
-                self.x[2] = angle
-                self.x[3] = self.position[3]
-                self.x[4] = self.position[4]
-                self.x[5] = self.robot.end_of_arm.status['stretch_gripper']['pos']
-                self.xR[0] = self.objectPosition[2]
-                self.xR[1] = self.objectPosition[0]
-                self.xR[2] = self.objectPosition[1] - self.offsetZ
-                #depot position
-                self.xR[5] = 0
-                self.xR[6] = 0
-                self.xR[7] = .15
-
-                # self.robot.end_of_arm.move_to('stretch_gripper', 30)
+                if self.robot is not None:
+                    angle = self.transform_to_pipi((np.pi/180)*(self.rotations[2])+ pi/2)[0]
+                    self.x[0]= self.position[2]
+                    self.x[1] = self.position[0]
+                    self.x[2] = angle
+                    self.x[3] = self.position[3]
+                    self.x[4] = self.position[4]
+                    self.x[5] = self.robot.end_of_arm.status['stretch_gripper']['pos']
+                    self.xR[0] = self.objectPosition[2]
+                    self.xR[1] = self.objectPosition[0]
+                    self.xR[2] = self.objectPosition[1] - self.offsetZ
+                    #depot position
+                    self.xR[5] = 0
+                    self.xR[6] = 0
+                    self.xR[7] = .15
 
                 print('X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}'.format(round(self.x[0],2),round(self.x[1],2),round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),round(self.x[5],2)))
                 print('objectX: {}, objectY: {}, objectY: {}'.format(round(self.xR[0],2),round(self.xR[1],2),round(self.xR[2],2)))
                 # print(self.rotations)
                 theTime = time.time()
-                '''fse.f
+                '''
                 This Simulates the process 
                 '''
                 self.checkInputs()
@@ -431,16 +399,18 @@ class formData:
                     vZ = deltaZ[0][i]
                     vGrip = deltaGrip[0][i]
                     print('Vd: {}, vOmega: {}, vD: {},vZ: {}, vGrip: {}'.format(d,phi,vD,vZ,vGrip))
-                    self.robot.base.set_velocity(v_m=d, w_r=phi)
-                    self.robot.arm.set_velocity(v_m=vD)
-                    self.robot.lift.set_velocity(v_m=vZ)
-                    self.robot.end_of_arm.move_by('stretch_gripper', vGrip)
+                    if self.robot is not None:
+                        self.robot.base.set_velocity(v_m=d, w_r=phi)
+                        self.robot.arm.set_velocity(v_m=vD)
+                        self.robot.lift.set_velocity(v_m=vZ)
+                        self.robot.end_of_arm.move_by('stretch_gripper', vGrip)
 
-                    self.robot.push_command()
-                    newPos = helperFuncs.integrateOdom([d,phi],self.x[3*i:3*i+3])
-                    # self.x[3 * i:3 * i + 3] = newPos
-                    # self.x[3*i+3] += deltaD[0][i] * loopTime
-                    # self.x[3*i+4] += deltaZ[0][i] * loopTime
+                        self.robot.push_command()
+                    else:
+                        newPos = helperFuncs.integrateOdom([d,phi],self.x[3*i:3*i+3])
+                        self.x[3 * i:3 * i + 3] = newPos
+                        self.x[3*i+3] += deltaD[0][i] * loopTime
+                        self.x[3*i+4] += deltaZ[0][i] * loopTime
 
             yield self.x
 
@@ -462,6 +432,7 @@ class formData:
             armY = [armpoint1[1],armpoint2[1]]
             self.robotArm[str(i)].set_data(armX, armY)
             self.robotArm[str(i)].set_color(self.cm(round(x[self.sizeU*i+4]*232)))
+            self.objects.set_data(self.xR[0],self.xR[1])
 
         return self.robots
 
@@ -724,14 +695,18 @@ class formData:
         self.master.destroy()
 
 if __name__ == "__main__":
-    loadOnStart = 0
-    robot = stretch_body.robot.Robot()
-    robot.startup()
-    robot.end_of_arm.move_to('wrist_yaw', 0)
-    robot.end_of_arm.move_to('stretch_gripper', 30)
-    robot.lift.move_to(1)
-    robot.arm.move_to(0)
-    robot.push_command()
+    realRobots = 0
+    if realRobots:
+        import stretch_body.robot
+        robot = stretch_body.robot.Robot()
+        robot.startup()
+        robot.end_of_arm.move_to('wrist_yaw', 0)
+        robot.end_of_arm.move_to('stretch_gripper', 30)
+        robot.lift.move_to(1)
+        robot.arm.move_to(0)
+        robot.push_command()
+    else:
+        robot = None
 
     try:
         f = formData(robot)
@@ -741,15 +716,16 @@ if __name__ == "__main__":
         pass
     finally:
         # Stop the robot
-        print('Stopping robot')
-        robot.base.set_velocity(v_m=0, w_r=0)
-        robot.push_command()
-        robot.end_of_arm.move_to('stretch_gripper', 25)
+        if realRobots:
+            print('Stopping robot')
+            robot.base.set_velocity(v_m=0, w_r=0)
+            robot.push_command()
+            robot.end_of_arm.move_to('stretch_gripper', 25)
 
-        time.sleep(2)
-        robot.base.set_velocity(v_m=0, w_r=0)
-        robot.push_command()
-        print('robot stopped!')
+            time.sleep(2)
+            robot.base.set_velocity(v_m=0, w_r=0)
+            robot.push_command()
+            print('robot stopped!')
 
     print('finished')
 

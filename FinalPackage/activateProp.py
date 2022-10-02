@@ -798,19 +798,17 @@ def pickTransition(specattr,allTransMax,x,props,t,wall,xR,preF, roadmap,maxV,siz
     return trans2Make, robustness,ids
 
 def checkUntil(specattr, allTransitions):
-    allUnt = []
     for i in range(np.size(specattr.Pi_mu)):
         if specattr.Pi_mu[i].phi_unt != 0:
-            propOfI = self.State.phi[i].prop_label
-            propOfI2 = self.State.phi[i].phiUntil
-            ia = self.State.controllablePropOrder[list(self.State.controllableProp).index(propOfI)]
+            propOfI = re.split('\.',specattr.Pi_mu[i].prop_label)[-1]
+            propOfI2 = specattr.Pi_mu[i].phiUntil
+            ia = specattr.controllablePropOrder[list(specattr.controllableProp).index(propOfI)]
             ia2 = []
             splitPhiUntil = re.split('(\||\&)', propOfI2)
             for j in range(np.size(splitPhiUntil)):
                 if '&' not in splitPhiUntil[j] and '|' not in splitPhiUntil[j]:
                     predOfI = re.search('(?<=props\.).+?(?=(\)|\s))', splitPhiUntil[j])[0]
-                    locOfPred = list(self.State.controllableProp).index(predOfI)
-                    #ia2.append(self.State.controllablePropOrder[locOfPred])
+                    locOfPred = list(specattr.controllableProp).index(predOfI)
                     ia2.append(locOfPred)
 
             for j in range(np.size(allTransitions, 0)):

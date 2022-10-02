@@ -38,11 +38,12 @@ def prepSpec(psi,sizeState,sizeU):
         pi_mu = abstractedPred(mu[i],a,b,type,alpha_i,psi_until,i,sizeState, sizeU)
         Pi_mu.append(pi_mu)
     print('Total time to abstract predicates was {} seconds'.format(time.time()-t1))
-    return Pi_mu, psi, inpRef, inpLabels,evProps
-
-def getBuchi(Pi_mu, psi,buchiFile, text1, master, inpRef, inpLabels,evProps ):
-    t1 = time.time()
     gamma = STL2LTL(psi)
+    Pi_mu = handleUntil(gamma, Pi_mu)
+    return Pi_mu, psi, inpRef, inpLabels,evProps, gamma
+
+def getBuchi(Pi_mu, psi,buchiFile, text1, master, inpRef, inpLabels,evProps,gamma):
+    t1 = time.time()
     print('Total time to translate to LTL Formula was {} seconds'.format(time.time()-t1))
 
     b_gamma, accepting = LTL2Buchi(gamma,buchiFile)
@@ -183,10 +184,9 @@ def searchUntil(mu,psi, parseTree):
             psi_until = 1
         else:
             psi_until = 0
-
+    pref = []
     if psi_until:
         untCases = [(m.start(0), m.end(0)) for m in re.finditer('un_\[', psi)]
-        pref = []
         for i in range(np.size(untCases, 0)):
             j = untCases[i][0]
             numOpen = 0
@@ -206,6 +206,51 @@ def searchUntil(mu,psi, parseTree):
             psi_until = 0
     return psi_until
 
+def handleUntil(STL, Pi_mu):
+    # First find all phrases with until
+    untCases = [(m.start(0), m.end(0)) for m in re.finditer('U', STL)]
+    pref = []
+    suff = []
+    for i in range(np.size(untCases, 0)):
+        j = untCases[i][0]
+        foundOpen = 0
+        numOpen = 0
+        numClose = 1
+        locToStart = [(m.start(0), m.end(0)) for m in re.finditer('\)', STL[:j])][-1][0]
+
+        while numOpen != numClose:
+            locToStart -= 1
+            if STL[locToStart] == '(':
+                numOpen += 1
+            if STL[locToStart] == ')':
+                numClose += 1
+
+        pref.append(STL[locToStart:j])
+
+        numOpen = 1
+        numClose = 0
+        locToEnd = [(m.start(0), m.end(0)) for m in re.finditer('\(', STL[j:])][0][0] + j
+        while numOpen != numClose:
+            locToEnd += 1
+            if STL[locToEnd] == '(':
+                numOpen += 1
+            if STL[locToEnd] == ')':
+                numClose += 1
+        suff.append(STL[j + 1:locToEnd + 1])
+
+    toAppend = 0
+    for i in range(np.size(Pi_mu, 0)):
+        for j in range(np.size(suff, 0)):
+            toAppend = 0
+            if Pi_mu[i].prop_label + ')' in pref[j] or Pi_mu[i].prop_label + ' ' in pref[j] or Pi_mu[i].prop_label in pref[j]:
+                toAppend = 1
+                break
+        if toAppend == 1:
+            Pi_mu[i].phiUntil = suff[j]
+        else:
+            Pi_mu[i].phiUntil = ''
+
+    return Pi_mu
 def timingFromRight(mu,psi):
     mu_p = mu + '\)'
     timingLoc = re.split(mu_p, psi)[1]
