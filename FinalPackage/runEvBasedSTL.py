@@ -42,7 +42,7 @@ class formData:
         self.sizeState = 3
         self.sizeU = 5
         self.wheel2Center =.4
-        self.offsetX = -.025
+        self.offsetX = -.05
         self.armZero = .19
         self.offsetZ = 0.08
         self.running = True
@@ -709,8 +709,8 @@ class formData:
         self.master.destroy()
 
 if __name__ == "__main__":
-    realRobots = 0
-    logData = 1
+    realRobots = 1
+    logData = 0
     if realRobots:
         import stretch_body.robot
         robot = stretch_body.robot.Robot()
@@ -735,6 +735,8 @@ if __name__ == "__main__":
         if realRobots:
             print('Stopping robot')
             robot.base.set_velocity(v_m=0, w_r=0)
+            robot.arm.set_velocity(v_m=0)
+            robot.lift.set_velocity(v_m=0)
             robot.push_command()
             robot.end_of_arm.move_to('stretch_gripper', 25)
 

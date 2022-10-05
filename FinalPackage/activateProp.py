@@ -425,6 +425,7 @@ def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU):
                 try:
                     allPaths = specattr[b].nRoutes[potState][reachableAcceptCycle[j]]
                 except:
+                    print(props.pred0,props.pred1,props.pred2,props.pred3,props.pred4,props.pred5,props.pred6,props.pred7,props.pred8)
                     allPaths = specattr[b].nRoutes[potState][j]
 
                 paths2Consider.append(allPaths)

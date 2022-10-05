@@ -10,3 +10,5 @@ FinalPackage/PickleFiles/RALspec6.pkl
 *.iml
 FinalPackage/.idea/Final Package.iml
 FinalPackage/Anaconda3-2022.05-Linux-x86_64.sh
+*.pyc
+*.xml
