@@ -32,7 +32,7 @@ import forwardBuchi
 
 
 class formData:
-    def __init__(self,robot):
+    def __init__(self,robot,logData):
         self.robot = robot
         self.M = 2 #Number of Robots
         self.N = 4  # Number of Inputs
@@ -46,6 +46,9 @@ class formData:
         self.armZero = .19
         self.offsetZ = 0.08
         self.running = True
+        self.logData = logData
+        if logData:
+            self.log = []
         # Default spec location
         my_dir0 = os.path.dirname(os.path.abspath(__file__))
         my_dir2 = os.path.join(my_dir0, 'Specs', '')
@@ -245,6 +248,10 @@ class formData:
         self.text1 = specParams[3]
         self.master.geometry("1400x700")
         if self.preFailure:
+            self.text1.configure(state='normal')
+            self.text1.delete("end-8l", "end")
+            self.text1.configure(state='disabled')
+            self.master.update()
             self.updateStatus(self.text1, self.master, '\nPre-Failure Warnings:\n')
         self.pause = False
         tk.Button(self.master, text="Pause", command=self.pause_animation).grid(row=19, column=3, sticky=tk.W, pady=6)
@@ -399,6 +406,12 @@ class formData:
                     vZ = deltaZ[0][i]
                     vGrip = deltaGrip[0][i]
                     print('Vd: {}, vOmega: {}, vD: {},vZ: {}, vGrip: {}'.format(d,phi,vD,vZ,vGrip))
+                    if self.logData:
+                        nextRow = self.x.tolist() + nom[0].tolist() + self.xR.tolist()
+                        for j in range(np.size(self.specattr)):
+                            nextRow += self.specattr[j].input.tolist()
+                        nextRow += [self.psi] + [self.psinew]
+                        self.log.append(nextRow)
                     if self.robot is not None:
                         self.robot.base.set_velocity(v_m=d, w_r=phi)
                         self.robot.arm.set_velocity(v_m=vD)
@@ -697,6 +710,7 @@ class formData:
 
 if __name__ == "__main__":
     realRobots = 0
+    logData = 1
     if realRobots:
         import stretch_body.robot
         robot = stretch_body.robot.Robot()
@@ -706,15 +720,12 @@ if __name__ == "__main__":
         robot.lift.move_to(1)
         robot.arm.move_to(0)
         robot.push_command()
-        # while True:
-        #     print(robot.end_of_arm.status['stretch_gripper']['pos_pct'])
-        #     robot.end_of_arm.move_by('stretch_gripper', -2)
-        #     time.sleep(.5)
+
     else:
         robot = None
 
     try:
-        f = formData(robot)
+        f = formData(robot,logData)
         f.makeForm()
         tk.mainloop()
     except:
