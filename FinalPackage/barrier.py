@@ -35,8 +35,13 @@ def totalBarrier(specattr, ind, indOfActive):
             try:
                 if (specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].type == 'ev' and not specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].currentTruth):
                     if specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].bxt_i is not None:
-                        bxt_i.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].bxt_i)
-                        piRobot.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]])
+                        if hasattr(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]], 'satisfied'):
+                            if not specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].satsified:
+                                bxt_i.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].bxt_i)
+                                piRobot.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]])
+                        else:
+                            bxt_i.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].bxt_i)
+                            piRobot.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]])
             except:
                 print('fail')
                 pass

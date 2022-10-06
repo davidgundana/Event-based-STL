@@ -29,7 +29,7 @@ from matplotlib.animation import FuncAnimation
 import control
 import helperFuncs
 import forwardBuchi
-
+from datetime import datetime
 
 class formData:
     def __init__(self,robot,logData):
@@ -47,12 +47,12 @@ class formData:
         self.offsetZ = 0.08
         self.running = True
         self.logData = logData
+        self.modifyTime = 0
         if logData:
             self.log = []
         # Default spec location
         my_dir0 = os.path.dirname(os.path.abspath(__file__))
-        my_dir2 = os.path.join(my_dir0, 'Specs', '')
-        my_dir2 = os.path.join(my_dir0, 'Specs', '')
+        my_dir2 = os.path.join(my_dir0, 'buchiRef.txt')
         my_dir3 = os.path.join(my_dir0, 'Maps', 'openMap.txt')
         my_dir4 = os.path.join(my_dir0, 'Maps', 'openNodes.txt')
         my_dir = os.path.join(my_dir0, 'Specs', 'ICRA2023Spec4.txt')
@@ -63,8 +63,8 @@ class formData:
         self.objectPosition = {}
 
         #NRI ROUTE 1 DEFAULTS
-        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2]
-        self.default = np.array(['1', '5', '0.2,0.2,0.05,0.07,12', '1.8,1.8,.342,0,0,75', '0,0,0.025,0,-2,-2,-2,0,0,0,0'])
+        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2, thetaOrient2]
+        self.default = np.array(['1', '5', '0.2,0.2,0.1,0.07,12', '1.8,1.8,.342,0,0,75', '0,0,0.025,0,-2,-2,-2,0,0,0,0,0'])
         #NRI ROUTE 2 DEFAULTS
         # self.default = np.array(['1', '5', '1.5,1.5,15', '0.12,67.55,0', '0.12,62,0'])
 
@@ -165,7 +165,7 @@ class formData:
         # Initialize Set of Buchis and potential states
         # Run prepare Spec
         Pi_mu, psi, inpRef, inpLabels,evProps,gamma = prep.prepSpec(psi,self.sizeState, self.sizeU)
-        b_gamma = prep.getBuchi(Pi_mu,psi, self.filename2, text1, master, inpRef, inpLabels,evProps,gamma )
+        b_gamma = prep.getBuchi(Pi_mu,psi, self.filename2, text1, master, inpRef, inpLabels,evProps,gamma,self.bypassbuchi )
         self.psiRef = psi
         # b_gamma = prep.prepSpec(psi, self.filename2, text1, master,self.sizeState, self.sizeU,1)
 
@@ -349,6 +349,10 @@ class formData:
         time.sleep(1)
         while self.running:
             if not self.pause:
+                theTime = time.time()
+                '''
+                This Simulates the process 
+                '''
                 print('--------------------------------------------------------------')
                 if self.robot is not None:
                     angle = self.transform_to_pipi((np.pi/180)*(self.rotations[2])+ pi/2)[0]
@@ -366,17 +370,13 @@ class formData:
                     self.xR[6] = -2
                     self.xR[7] = .15
 
-                print('X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}'.format(round(self.x[0],2),round(self.x[1],2),round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),round(self.x[5],2)))
-                print('objectX: {}, objectY: {}, objectY: {}'.format(round(self.xR[0],2),round(self.xR[1],2),round(self.xR[2],2)))
-                # print(self.rotations)
-                theTime = time.time()
-                '''
-                This Simulates the process 
-                '''
+                print('X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}, oX1: {}, oY1: {}, oY2: {}'.format(
+                    round(self.x[0],2),round(self.x[1],2),round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),
+                    round(self.x[5],2), round(self.xR[0],2),round(self.xR[1],2),round(self.xR[2],2)))
+
                 self.checkInputs()
                 self.updateRef()
                 nom, self.specattr = control.synthesis(self.specattr, self.potS, self.roadmap, self.x, self.xR, self.t, self.maxV, self.sizeState,self.sizeU, self.preFailure, self.text1, self.master)
-                # self.specattr, self.potS = forwardBuchi.forward(self.specattr,self.potS)
                 v = np.zeros((1, int(np.size(self.x)/self.sizeState)))
                 omega = np.zeros((1, int(np.size(self.x)/self.sizeState)))
                 deltaD = np.zeros((1, int(np.size(self.x)/self.sizeState)))
@@ -407,11 +407,13 @@ class formData:
                     vGrip = deltaGrip[0][i]
                     print('Vd: {}, vOmega: {}, vD: {},vZ: {}, vGrip: {}'.format(d,phi,vD,vZ,vGrip))
                     if self.logData:
-                        nextRow = self.x.tolist() + nom[0].tolist() + self.xR.tolist()
+                        nextRow = [self.t] + self.x.tolist() + nom[0].tolist() + self.xR.tolist()
                         for j in range(np.size(self.specattr)):
                             nextRow += self.specattr[j].input.tolist()
+                        nexRow += [self.modifyTime]
                         nextRow += [self.psi] + [self.psinew]
                         self.log.append(nextRow)
+
                     if self.robot is not None:
                         self.robot.base.set_velocity(v_m=d, w_r=phi)
                         self.robot.arm.set_velocity(v_m=vD)
@@ -487,7 +489,7 @@ class formData:
         # Check to see what if inputs have changed
 
     def updateRef(self):
-        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2]
+        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2,thetaOrient2]
         # xy is on front face of robot. arm is in offsetX
         centroidPoint = helperFuncs.robot2global(self.x[0:3], [-self.offsetX, 0])
 
@@ -496,8 +498,10 @@ class formData:
         #print(self.xR[3])
         self.xR[4] = np.sqrt((self.x[0]-self.xR[0])**2 + (self.x[1]-self.xR[1])**2) - self.armZero
         self.xR[8] = np.sqrt((self.x[0]-self.xR[5])**2 + (self.x[1]-self.xR[6])**2) - self.armZero
+        self.xR[9] = np.arctan2(self.xR[5]-centroidPoint[1],self.xR[6]-centroidPoint[0]) + np.pi/2
 
     def modifySpec(self):
+        currTime = time.time()
         newSTL = self.PsiSTLnew.get("1.0",tk.END)
         newSTL = re.sub('\\n','',newSTL)
         if self.psi != newSTL:
@@ -574,6 +578,7 @@ class formData:
             self.PsiSTL.delete("end-1l", "end")
             self.PsiSTL.insert(tk.END, newSTL, 'text')
             self.PsiSTL.configure(state='disabled')
+        self.modifyTime = time.time()-currTime
 
     def makeForm(self):
         #First make the form and create the few entries that are required for initialization
@@ -709,7 +714,7 @@ class formData:
         self.master.destroy()
 
 if __name__ == "__main__":
-    realRobots = 1
+    realRobots = 0
     logData = 0
     if realRobots:
         import stretch_body.robot
@@ -744,6 +749,17 @@ if __name__ == "__main__":
             robot.base.set_velocity(v_m=0, w_r=0)
             robot.push_command()
             print('robot stopped!')
+        if f.logData:
+            print('logging data')
+            tpath = os.getcwd()
+            my_dir = os.path.dirname(os.path.abspath(__file__))
+            date = datetime.now().strftime("%Y_%m_%d-%I:%M:%S_%p")
+            logName = 'logData_' + date + '.txt'
+            logPath = os.path.join(my_dir, 'logs', logName)
+            with open(logPath, 'w') as g:
+                for line in f.log:
+                    g.write(f"{line}\n")
+            print('data logged')
 
     print('finished')
 

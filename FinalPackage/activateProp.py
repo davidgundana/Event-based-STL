@@ -621,7 +621,11 @@ def pickTransition(specattr,allTransMax,x,props,t,wall,xR,preF, roadmap,maxV,siz
             else:
                 inputTime = phi[s].t_e
             if not phi[s].currentTruth and t >= phi[s].a + inputTime and t <= phi[s].b + inputTime:
-                unsatisfiedPhi.append(phi[s])
+                if hasattr(phi[s], 'satisfied'):
+                    if not phi[s].satisfied:
+                        unsatisfiedPhi.append(phi[s])
+                else:
+                    unsatisfiedPhi.append(phi[s])
         for j in range(np.size(satisfiedPhi)):
             if robustRef[satisfiedPhi[j].id] is None:
                 robtemp = weights[0] * satisfiedPhi[j].distFromSafe
@@ -704,7 +708,10 @@ def pickTransition(specattr,allTransMax,x,props,t,wall,xR,preF, roadmap,maxV,siz
                             xTemp = copy.deepcopy(x)
                             pPoint = phiRobot[possOrders[j][k-1]].point
                             pPoint[0] = eval(str(phiRobot[possOrders[j][k-1]].point[0]))
-                            pPoint[1] = eval(str(phiRobot[possOrders[j][k-1]].point[1]))
+                            try:
+                                pPoint[1] = eval(str(phiRobot[possOrders[j][k-1]].point[1]))
+                            except:
+                                print('here')
                             xTemp[phiRobot[possOrders[j][k]].nom[0, 0:2].astype('int')] = pPoint
                             nom, costTemp = getNom(phiRobot[possOrders[j][k]], roadmap, xTemp, xR, maxV,sizeU)
                             distFromSafe2 = phiRobot[possOrders[j][k-1]].distFromSafe + costTemp
