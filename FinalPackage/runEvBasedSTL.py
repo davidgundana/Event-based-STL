@@ -45,6 +45,7 @@ class formData:
         self.offsetX = -.05
         self.armZero = .19
         self.offsetZ = 0.08
+        self.offsetZ2 = -0.15
         self.running = True
         self.logData = logData
         self.modifyTime = 0
@@ -61,10 +62,11 @@ class formData:
         self.positions = {}
         self.rotations = {}
         self.objectPosition = {}
+        self.objectPosition2 = {}
 
         #NRI ROUTE 1 DEFAULTS
         # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2, thetaOrient2]
-        self.default = np.array(['1', '5', '0.2,0.2,0.1,0.07,12', '1.8,1.8,.342,0,0,75', '0,0,0.025,0,-2,-2,-2,0,0,0,0,0'])
+        self.default = np.array(['1', '5', '0.2,0.2,0.05,0.07,12', '1.8,1.8,.342,0,0,75', '0,0,0.025,0,-2,-2,-2,0,0,0,0,0'])
         #NRI ROUTE 2 DEFAULTS
         # self.default = np.array(['1', '5', '1.5,1.5,15', '0.12,67.55,0', '0.12,62,0'])
 
@@ -201,6 +203,9 @@ class formData:
             self.rotations = (rotx, roty, rotz)
         if id == 30 and position != []:
             self.objectPosition = position
+        if id == 32 and position != []:
+            self.objectPosition2 = position
+
 
     def transform_to_pipi(self,input_angle):
         revolutions = int((input_angle + np.sign(input_angle) * pi) / (2 * pi))
@@ -366,23 +371,38 @@ class formData:
                     self.xR[1] = self.objectPosition[0]
                     self.xR[2] = self.objectPosition[1] - self.offsetZ
                     #depot position
-                    self.xR[5] = -2
-                    self.xR[6] = -2
-                    self.xR[7] = .15
+                    self.xR[5] = self.objectPosition2[2]
+                    self.xR[6] = self.objectPosition2[0]
+                    self.xR[7] = self.objectPosition2[1] - self.offsetZ2
 
-                print('X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}, oX1: {}, oY1: {}, oY2: {}'.format(
+                print('X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}, oX1: {}, oY1: {}, oT1: {}, oX2: {}, oY2: {}, oT2: {}'.format(
                     round(self.x[0],2),round(self.x[1],2),round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),
-                    round(self.x[5],2), round(self.xR[0],2),round(self.xR[1],2),round(self.xR[2],2)))
+                    round(self.x[5],2), round(self.xR[0],2),round(self.xR[1],2),round(self.xR[2],2), round(self.xR[5],2),round(self.xR[6],2),round(self.xR[7],2)))
 
                 self.checkInputs()
                 self.updateRef()
-                nom, self.specattr = control.synthesis(self.specattr, self.potS, self.roadmap, self.x, self.xR, self.t, self.maxV, self.sizeState,self.sizeU, self.preFailure, self.text1, self.master)
+                nom, self.specattr,error = control.synthesis(self.specattr, self.potS, self.roadmap, self.x, self.xR, self.t, self.maxV, self.sizeState,self.sizeU, self.preFailure, self.text1, self.master)
                 v = np.zeros((1, int(np.size(self.x)/self.sizeState)))
                 omega = np.zeros((1, int(np.size(self.x)/self.sizeState)))
                 deltaD = np.zeros((1, int(np.size(self.x)/self.sizeState)))
                 deltaZ = np.zeros((1, int(np.size(self.x)/self.sizeState)))
                 deltaGrip = np.zeros((1, int(np.size(self.x) / self.sizeState)))
+                if error:
+                    self.robot.base.set_velocity(v_m=0, w_r=0)
+                    self.robot.arm.set_velocity(v_m=0)
+                    self.robot.lift.set_velocity(v_m=0)
+                    self.robot.end_of_arm.move_by('stretch_gripper', 0)
+                    self.robot.push_command()
+                    self.robot.base.set_velocity(v_m=0, w_r=0)
+                    self.robot.arm.set_velocity(v_m=0)
+                    self.robot.lift.set_velocity(v_m=0)
+                    self.robot.push_command()
 
+                    time.sleep(2)
+                    self.robot.base.set_velocity(v_m=0, w_r=0)
+                    self.robot.push_command()
+                    print('stopping robot')
+                    time.sleep(10000)
                 for i in range(int(np.size(self.x)/self.sizeState)):
                     v[0, i] = nom[0][3 * i]
                     omega[0, i] = nom[0][3 * i + 1]
@@ -410,7 +430,7 @@ class formData:
                         nextRow = [self.t] + self.x.tolist() + nom[0].tolist() + self.xR.tolist()
                         for j in range(np.size(self.specattr)):
                             nextRow += self.specattr[j].input.tolist()
-                        nexRow += [self.modifyTime]
+                        nextRow += [self.modifyTime]
                         nextRow += [self.psi] + [self.psinew]
                         self.log.append(nextRow)
 
@@ -498,7 +518,7 @@ class formData:
         #print(self.xR[3])
         self.xR[4] = np.sqrt((self.x[0]-self.xR[0])**2 + (self.x[1]-self.xR[1])**2) - self.armZero
         self.xR[8] = np.sqrt((self.x[0]-self.xR[5])**2 + (self.x[1]-self.xR[6])**2) - self.armZero
-        self.xR[9] = np.arctan2(self.xR[5]-centroidPoint[1],self.xR[6]-centroidPoint[0]) + np.pi/2
+        self.xR[9] = np.arctan2(self.xR[6]-centroidPoint[1],self.xR[5]-centroidPoint[0]) + np.pi/2
 
     def modifySpec(self):
         currTime = time.time()
@@ -714,8 +734,8 @@ class formData:
         self.master.destroy()
 
 if __name__ == "__main__":
-    realRobots = 0
-    logData = 0
+    realRobots = 1
+    logData = 1
     if realRobots:
         import stretch_body.robot
         robot = stretch_body.robot.Robot()

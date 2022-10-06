@@ -6,7 +6,7 @@ from getNom import getNom
 import barrier
 from customQP import quadprog
 import runEvBasedSTL
-
+import time
 
 def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,text1, master):
     # Check to see if you care about walls. If you do, find the closest point
@@ -42,7 +42,7 @@ def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,tex
     for i in range(1, int(np.size(x)/sizeState) + 1):
         bxtx, piRobot = barrier.totalBarrier(specattr, i, indOfActive)
         [bPartialX, bPartialT] = barrier.partials(piRobot, x, xR, t, specattr[0].wall, roadmap, 0,bxtx)
-
+        error = 0
         if np.any(bPartialX):
             differential = 1
             if differential:
@@ -61,9 +61,9 @@ def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,tex
             b = alpha * (bxtx) + bPartialT[0]
 
             nominals = getAllNoms(piRobot,maxV,differential, sizeU)
-            nom = getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU)
+            nom,error = getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU)
 
-    return nom,specattr
+    return nom,specattr, error
 
 def getAllNoms(piRobot, maxV, differential,sizeU):
     sumNom = np.zeros((1, sizeU), dtype=float)
@@ -81,7 +81,7 @@ def getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU):
     # lbI = -maxV[3 * i - 3:3 * i]
     # ubI = maxV[3 * i - 3:3 * i]
     # H = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 2]])
-
+    error = 0
     Anew = A
     lbI = -maxV
     ubI = maxV
@@ -99,13 +99,14 @@ def getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU):
 
     if not qp.result.success:
         print('Specification violated')
+        error = 1
         # nom[0][3 * i - 3] = 0
         # nom[0][3 * i - 2] = 0
         # nom[0][3 * i - 1] = 0
     else:
         nom[0][sizeU*(i-1):sizeU*i] = nomInd
 
-    return nom
+    return nom, error
 def checkWall(specattr,roadmap,x):
     found = 0
     for i in range(np.size(specattr)):

@@ -711,7 +711,7 @@ def pickTransition(specattr,allTransMax,x,props,t,wall,xR,preF, roadmap,maxV,siz
                             try:
                                 pPoint[1] = eval(str(phiRobot[possOrders[j][k-1]].point[1]))
                             except:
-                                print('here')
+                                print('conflict')
                             xTemp[phiRobot[possOrders[j][k]].nom[0, 0:2].astype('int')] = pPoint
                             nom, costTemp = getNom(phiRobot[possOrders[j][k]], roadmap, xTemp, xR, maxV,sizeU)
                             distFromSafe2 = phiRobot[possOrders[j][k-1]].distFromSafe + costTemp
