@@ -537,6 +537,7 @@ class formData:
             print('Change in Psi')
             newPreds,psiNew,inpRef,inpLabels,evProps,gamma = prep.prepSpec(newSTL, self.sizeState, self.sizeU)
             oldPreds = self.specattr[0].Pi_mu
+            newParameters = []
             for i in range(np.size(oldPreds)):
                 if oldPreds[i].a != newPreds[i].a or oldPreds[i].b != newPreds[i].b:
                     print('timing bound changed for {}'.format(i))
@@ -551,6 +552,8 @@ class formData:
                     self.specattr[0].Pi_mu[i].point = newPreds[i].point
                     self.specattr[0].Pi_mu[i].pred = newPreds[i].pred
                     self.specattr[0].Pi_mu[i].signFS = newPreds[i].signFS
+                newParameters.append(self.specattr[0].Pi_mu[i].pred[0])
+                self.specattr[0].parameters = newParameters
             if np.size(newPreds) != np.size(oldPreds):
                 psiToAdd = psiNew[len(self.psiRef):]
                 gamma = re.findall('(\&|\|)',psiToAdd)[0]
@@ -743,8 +746,8 @@ class formData:
         self.master.destroy()
 
 if __name__ == "__main__":
-    realRobots = 1
-    logData = 1
+    realRobots = 0
+    logData = 0
     if realRobots:
         import stretch_body.robot
         robot = stretch_body.robot.Robot()
