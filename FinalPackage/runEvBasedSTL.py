@@ -525,7 +525,7 @@ class formData:
         self.xR[3] = self.transform_to_pipi(self.xR[3])[0]
         #print(self.xR[3])
         self.xR[4] = np.sqrt((self.x[0]-self.xR[0])**2 + (self.x[1]-self.xR[1])**2) - self.armZero
-        self.xR[8] = np.sqrt((self.x[0]-self.xR[5])**2 + (self.x[1]-self.xR[6])**2) - self.armZero
+        self.xR[8] = np.sqrt((self.x[0]-self.xR[5])**2 + (self.x[1]-self.xR[6])**2) - self.armZero -.2
         self.xR[9] = np.arctan2(self.xR[6]-centroidPoint[1],self.xR[5]-centroidPoint[0]) + np.pi/2
         self.xR[13] = np.sqrt((self.x[0]-self.xR[10])**2 + (self.x[1]-self.xR[11])**2) - self.armZero
         self.xR[14] = np.arctan2(self.xR[11]-centroidPoint[1],self.xR[10]-centroidPoint[0]) + np.pi/2
@@ -553,7 +553,8 @@ class formData:
                     self.specattr[0].Pi_mu[i].pred = newPreds[i].pred
                     self.specattr[0].Pi_mu[i].signFS = newPreds[i].signFS
                 newParameters.append(self.specattr[0].Pi_mu[i].pred[0])
-                self.specattr[0].parameters = newParameters
+            self.specattr[0].parameters = newParameters
+            self.specattr[0].inpRef = inpRef
             if np.size(newPreds) != np.size(oldPreds):
                 psiToAdd = psiNew[len(self.psiRef):]
                 gamma = re.findall('(\&|\|)',psiToAdd)[0]
@@ -746,8 +747,8 @@ class formData:
         self.master.destroy()
 
 if __name__ == "__main__":
-    realRobots = 0
-    logData = 0
+    realRobots = 1
+    logData = 1
     if realRobots:
         import stretch_body.robot
         robot = stretch_body.robot.Robot()
