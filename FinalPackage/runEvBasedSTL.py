@@ -46,6 +46,7 @@ class formData:
         self.armZero = .19
         self.offsetZ = 0.08
         self.offsetZ2 = -0.15
+        self.offsetZ3 = .05
         self.running = True
         self.logData = logData
         self.modifyTime = 0
@@ -63,10 +64,11 @@ class formData:
         self.rotations = {}
         self.objectPosition = {}
         self.objectPosition2 = {}
+        self.objectPosition3 = {}
 
         #NRI ROUTE 1 DEFAULTS
-        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2, thetaOrient2]
-        self.default = np.array(['1', '5', '0.2,0.2,0.05,0.07,12', '1.8,1.8,.342,0,0,75', '0,0,0.025,0,-2,-2,-2,0,0,0,0,0'])
+        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2, thetaOrient2,thirdObjectX, thirdObjectY, thirdObjectZ, dist2Obj2, thetaOrient2]
+        self.default = np.array(['1', '5', '0.2,0.2,0.05,0.07,12', '9,9,.342,0,0,75', '0,0,0.025,0,-2,-2,-2,0,0,0,0,0,0,0,0'])
         #NRI ROUTE 2 DEFAULTS
         # self.default = np.array(['1', '5', '1.5,1.5,15', '0.12,67.55,0', '0.12,62,0'])
 
@@ -81,6 +83,7 @@ class formData:
             self.bypassbuchi = 0
         except:
             self.bypassbuchi = 1
+        self.bypassbuchi = 1
         self.preFailure = 0
         self.State = [] #pre-allocate state
         self.Conflicts = [] #pre-allocate conflicts
@@ -205,6 +208,8 @@ class formData:
             self.objectPosition = position
         if id == 32 and position != []:
             self.objectPosition2 = position
+        if id == 33 and position != []:
+            self.objectPosition3 = position
 
 
     def transform_to_pipi(self,input_angle):
@@ -374,11 +379,14 @@ class formData:
                     self.xR[5] = self.objectPosition2[2]
                     self.xR[6] = self.objectPosition2[0]
                     self.xR[7] = self.objectPosition2[1] - self.offsetZ2
-
+                    self.xR[10] = self.objectPosition3[2]
+                    self.xR[11] = self.objectPosition3[0]
+                    self.xR[12] = self.objectPosition3[1] - self.offsetZ3
+                print(np.sqrt((self.x[0] - self.xR[10]) ** 2 + (self.x[1] - self.xR[11]) ** 2))
+                print(self.specattr[0].parameters)
                 print('X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}, oX1: {}, oY1: {}, oT1: {}, oX2: {}, oY2: {}, oT2: {}'.format(
                     round(self.x[0],2),round(self.x[1],2),round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),
                     round(self.x[5],2), round(self.xR[0],2),round(self.xR[1],2),round(self.xR[2],2), round(self.xR[5],2),round(self.xR[6],2),round(self.xR[7],2)))
-
                 self.checkInputs()
                 self.updateRef()
                 nom, self.specattr,error = control.synthesis(self.specattr, self.potS, self.roadmap, self.x, self.xR, self.t, self.maxV, self.sizeState,self.sizeU, self.preFailure, self.text1, self.master)
@@ -402,7 +410,7 @@ class formData:
                     self.robot.base.set_velocity(v_m=0, w_r=0)
                     self.robot.push_command()
                     print('stopping robot')
-                    time.sleep(10000)
+                    self.running = False 
                 for i in range(int(np.size(self.x)/self.sizeState)):
                     v[0, i] = nom[0][3 * i]
                     omega[0, i] = nom[0][3 * i + 1]
@@ -509,7 +517,7 @@ class formData:
         # Check to see what if inputs have changed
 
     def updateRef(self):
-        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2,thetaOrient2]
+        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2,thetaOrient2,,thirdObjectX, thirdObjectY, thirdObjectZ]
         # xy is on front face of robot. arm is in offsetX
         centroidPoint = helperFuncs.robot2global(self.x[0:3], [-self.offsetX, 0])
 
@@ -519,14 +527,15 @@ class formData:
         self.xR[4] = np.sqrt((self.x[0]-self.xR[0])**2 + (self.x[1]-self.xR[1])**2) - self.armZero
         self.xR[8] = np.sqrt((self.x[0]-self.xR[5])**2 + (self.x[1]-self.xR[6])**2) - self.armZero
         self.xR[9] = np.arctan2(self.xR[6]-centroidPoint[1],self.xR[5]-centroidPoint[0]) + np.pi/2
-
+        self.xR[13] = np.sqrt((self.x[0]-self.xR[10])**2 + (self.x[1]-self.xR[11])**2) - self.armZero
+        self.xR[14] = np.arctan2(self.xR[11]-centroidPoint[1],self.xR[10]-centroidPoint[0]) + np.pi/2
     def modifySpec(self):
         currTime = time.time()
         newSTL = self.PsiSTLnew.get("1.0",tk.END)
         newSTL = re.sub('\\n','',newSTL)
         if self.psi != newSTL:
             print('Change in Psi')
-            newPreds,psiNew,inpRef,inpLabels,evProps = prep.prepSpec(newSTL, self.sizeState, self.sizeU)
+            newPreds,psiNew,inpRef,inpLabels,evProps,gamma = prep.prepSpec(newSTL, self.sizeState, self.sizeU)
             oldPreds = self.specattr[0].Pi_mu
             for i in range(np.size(oldPreds)):
                 if oldPreds[i].a != newPreds[i].a or oldPreds[i].b != newPreds[i].b:
