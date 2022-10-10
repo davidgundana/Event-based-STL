@@ -19,7 +19,7 @@ import buchiFuncs
 from getAllCommands import getAllCommands
 from prepForCommands import getCMD
 from makeSpecs import findInfo, handleUntil
-from activateProp import activateProp
+# from activateProp import activateProp
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import preparation as prep
@@ -61,7 +61,7 @@ class formData:
         my_dir2 = os.path.join(my_dir0, 'buchiRef.txt')
         my_dir3 = os.path.join(my_dir0, 'Maps', 'openMap.txt')
         my_dir4 = os.path.join(my_dir0, 'Maps', 'openNodes.txt')
-        my_dir = os.path.join(my_dir0, 'Specs', 'specTest.txt')
+        my_dir = os.path.join(my_dir0, 'Specs', 'ICRA2023Spec4.txt')
         my_dir5 = os.path.join(my_dir0, 'Maps', 'mapNodes.pkl')
         my_dir6 = os.path.join(my_dir0, 'Maps', 'mapNodeConnections.pkl')
         self.positions = {}
@@ -86,7 +86,7 @@ class formData:
             self.bypassbuchi = 0
         except:
             self.bypassbuchi = 1
-        # self.bypassbuchi = 1
+        self.bypassbuchi = 1
         self.preFailure = 0
         self.State = [] #pre-allocate state
         self.Conflicts = [] #pre-allocate conflicts
@@ -173,7 +173,7 @@ class formData:
         # Initialize Set of Buchis and potential states
         # Run prepare Spec
         Pi_mu, psi, inpRef, inpLabels,evProps,gamma = prep.prepSpec(psi,self.sizeState, self.sizeU)
-        b_gamma = prep.getBuchi(Pi_mu,psi, self.filename2, text1, master, inpRef, inpLabels,evProps,gamma,self.bypassbuchi )
+        b_gamma = prep.getBuchi(Pi_mu,psi, self.filename2, text1, master, inpRef, inpLabels,evProps,gamma,self.bypassbuchi,1 )
         self.psiRef = gamma
         # b_gamma = prep.prepSpec(psi, self.filename2, text1, master,self.sizeState, self.sizeU,1)
 
@@ -587,7 +587,7 @@ class formData:
                 for i in range(np.size(inpLabels,0)):
                     if inpLabels[i][0] in newSpec:
                         inpLabelsNew.append(inpLabels[i])
-                b_gamma = prep.getBuchi(Pi_mu, newSpec, '', '', '', inpRef, inpLabels, evProps, newSpec ,0)
+                b_gamma = prep.getBuchi(Pi_mu, newSpec, '', '', '', inpRef, inpLabels, evProps, newSpec ,0,0)
                 inpRefAdd = []
                 inpLabelsAdd = []
                 for j in range(np.size(propositions)):
@@ -600,6 +600,7 @@ class formData:
                 if gamma == '&':
                     # Generate Buchi Intersect
                     for i in range(np.size(self.specattr)):
+                        print('finding intersection')
                         self.specattr[i] = buchiFuncs.buchiIntersect(self.specattr[i],self.potS[i], b_gamma,0)
                 else:
                     # Add buchi to specattr

@@ -12,12 +12,16 @@ class StatesOfI:
         self.condCNF = [] # Simplified conditions
 
 def buchiIntersect(buchi1, s01, buchi2, s02):
-    specattr = copy.deepcopy(buchi1)
-    specattr2 = copy.deepcopy(buchi2)
+    # specattr = copy.deepcopy(buchi1)
+    # specattr2 = copy.deepcopy(buchi2)
+    specattr = buchi1
+    specattr2 = buchi2
     states = [(s01, s02, 0)]
+    print('calculating accepting states')
     accepting1 = buchi1.acceptingWithCycle
     buchi1 = buchi1.buchiStates
     accepting2 = buchi2.acceptingWithCycle
+    print('found accepting states')
     accepting3 = []
     buchi2 = buchi2.buchiStates
     buchi3Start = []
@@ -29,6 +33,7 @@ def buchiIntersect(buchi1, s01, buchi2, s02):
     new_list = []
     stateRef = [(0,0,0)]
     while len(states) != 0:
+        print(len(states), len(stateRef))
         for s in states:
             buchi3.append(StatesOfI())
             sOf1, sOf2, accPrev = s
@@ -74,16 +79,16 @@ def buchiIntersect(buchi1, s01, buchi2, s02):
                     buchi3[-1].condCNF.append(newFormula)
                     buchi3[-1].result.append(stateRef.index((n1,n2,acc)))
                     buchi3[-1].cond.append('(('+formula1Word + ') and (' + formula2Word + '))')
-
-        states = copy.deepcopy(new_list)
+        # states = copy.deepcopy(new_list)
+        states = new_list
         new_list = []
-
+    print('done')
     accepting_states = np.unique(accepting3)
     graph = np.zeros((np.size(buchi3), np.size(buchi3)))
     for i in range(np.size(buchi3)):
         for j in range(np.size(buchi3[i].result)):
             graph[i, int(buchi3[i].result[j])] = 1
-
+    print('finding accepting states')
     # Find accepting states with a cycle
     acceptingWithCycle = []
     for j in range(len(accepting_states)):
@@ -127,28 +132,29 @@ def buchiIntersect(buchi1, s01, buchi2, s02):
     specattr.locOfControllable = np.asarray([list(specattr.propositions).index(s) for s in list(specattr.controllableProp)])
     specattr.N = np.size(specattr.uncontrollableProp)
     specattr.nRoutes = [[]] * len(specattr.graph)
-    for i in range(np.size(specattr.graph, 0)):
-        tempRoute = []
-        for j in range(np.size(specattr.acceptingWithCycle, 0)):
-            goTo = specattr.acceptingWithCycle[j]
-            try:
-                allPaths = findNRoutes(specattr.graph, i, goTo)
-                shortestLength = len(min(allPaths, key=len))
-                allPaths = [path for path in allPaths if len(path) == shortestLength]
-
-                #double check first transition
-                if int(specattr.graph[allPaths[0][0],allPaths[0][1]]):
-                    tempRoute.append(allPaths)
-                else:
-                    if int(specattr.graph[allPaths[0][-1],allPaths[0][-2]]):
-                        allPaths[0].reverse()
-                        tempRoute.append(allPaths)
-                    else:
-                        tempRoute.append([])
-            except:
-                pass
-        specattr.nRoutes[i] = tempRoute
-
+    print('finding routes')
+    # for i in range(np.size(specattr.graph, 0)):
+    #     tempRoute = []
+    #     for j in range(np.size(specattr.acceptingWithCycle, 0)):
+    #         goTo = specattr.acceptingWithCycle[j]
+    #         try:
+    #             allPaths = findNRoutes(specattr.graph, i, goTo)
+    #             shortestLength = len(min(allPaths, key=len))
+    #             allPaths = [path for path in allPaths if len(path) == shortestLength]
+    #
+    #             #double check first transition
+    #             if int(specattr.graph[allPaths[0][0],allPaths[0][1]]):
+    #                 tempRoute.append(allPaths)
+    #             else:
+    #                 if int(specattr.graph[allPaths[0][-1],allPaths[0][-2]]):
+    #                     allPaths[0].reverse()
+    #                     tempRoute.append(allPaths)
+    #                 else:
+    #                     tempRoute.append([])
+    #         except:
+    #             pass
+    #     specattr.nRoutes[i] = tempRoute
+    specattr.nRoutes = []
     specattr.parameters += specattr2.parameters
     specattr.props.__dict__.update(specattr2.props.__dict__)    # specattr.uncontrollableProp =
     specattr.wall += specattr2.wall

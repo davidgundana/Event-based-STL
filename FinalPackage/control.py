@@ -18,13 +18,7 @@ def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,tex
 
     # Evaluate the current state of the environment
     specattr = evalProps(specattr, roadmap, x, xR, t, maxV,sizeU,differential)
-    if np.sqrt((x[0]-xR[15])**2+(x[1]-xR[16])**2) < 1.3:
-        print('here')
-    try:
-        if not (specattr[0].props.pred2):
-            print('here')
-    except:
-        pass
+
     # Find Propositions to activate based on the current state and transitiosn to an accepting state
     specattr, props2Activate, potS, _,_ = act.activate(specattr,potS,roadmap, 0,[],x, xR,t, maxV, sizeU)
     print(props2Activate)
@@ -104,7 +98,7 @@ def getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU,x,differential):
     nomInd = qp.result.x
     if not differential:
         # convert to v omega
-        newNom = helperFuncs.feedbackLin(nomInd[0], nomInd[1], x[2], .1, maxV[0])
+        newNom = helperFuncs.feedbackLin(nomInd[0], nomInd[1], x[2], .3, maxV[0])
         if newNom[1] != 0 and nomInd[2] !=0:
             print('confict')
         nomRet = np.zeros((1,5))
@@ -221,8 +215,6 @@ def evalProps(specattr, roadmap, x,xR,t,maxV,sizeU,differential):
                 signF = -specattr[i].Pi_mu[j].signFS[0]
                 specattr[i].Pi_mu[j].distFromSafe = cost + signF * specattr[i].Pi_mu[j].p
             else:
-                if t >= 10:
-                    print('here')
                 rob =  specattr[i].Pi_mu[j].robotsInvolved[0]
                 nomR, cost = getNom(specattr[i].Pi_mu[j], roadmap, x, xR,maxV[sizeU * rob - sizeU:sizeU*rob],sizeU,differential)
                 signF = specattr[i].Pi_mu[j].signFS[0]

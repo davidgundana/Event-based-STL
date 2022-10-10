@@ -198,9 +198,9 @@ def alBarrier(pi, t, x, xR ,wall, roadmap, preF):
         valP = [1.4 * p[0], (p[0] + p[1]) / 2, .6 * p[1]]
         coeff = np.polyfit(valP,[0,1,0],2)
         bxt_i = coeff[0]*eval(funcOf)**2 + coeff[1]*eval(funcOf) + coeff[2]
-    if bxt_i is not None:
-        if bxt_i <= .2:
-            print('here')
+#    if bxt_i is not None:
+#        if bxt_i <= .2:
+#            print('here')
     return pi
 
 def partials(piRobot, x, xR, t, wall, roadmap, preF,bxtx):

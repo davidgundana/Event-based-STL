@@ -43,7 +43,7 @@ def prepSpec(psi,sizeState,sizeU):
     Pi_mu = handleUntil(gamma, Pi_mu)
     return Pi_mu, psi, inpRef, inpLabels,evProps, gamma
 
-def getBuchi(Pi_mu, psi,buchiFile, text1, master, inpRef, inpLabels,evProps,gamma,bypass):
+def getBuchi(Pi_mu, psi,buchiFile, text1, master, inpRef, inpLabels,evProps,gamma,bypass,save):
     t1 = time.time()
     print('Total time to translate to LTL Formula was {} seconds'.format(time.time()-t1))
     if not bypass:
@@ -60,10 +60,12 @@ def getBuchi(Pi_mu, psi,buchiFile, text1, master, inpRef, inpLabels,evProps,gamm
             buchiParsed = buchiInfo.prepBuchi(buchi, text1, master)
             elapsedT3 = time.time() - t3
             print('The total time translate Buchi to be read fast {} seconds.'.format(str(elapsedT3)))
-            buchPath = os.path.dirname(os.path.abspath(__file__))
-            pickle_file_path = os.path.join(buchPath, 'PickleFiles','buchiRef.pkl')
-            with open(pickle_file_path, 'wb') as output:
-                pickle.dump(buchiParsed, output, pickle.DEFAULT_PROTOCOL)
+            if save:
+                print('Saving buchi')
+                buchPath = os.path.dirname(os.path.abspath(__file__))
+                pickle_file_path = os.path.join(buchPath, 'PickleFiles','buchiRef.pkl')
+                with open(pickle_file_path, 'wb') as output:
+                    pickle.dump(buchiParsed, output, pickle.DEFAULT_PROTOCOL)
     else:
         buchPath = os.path.dirname(os.path.abspath(__file__))
         pickle_file_path = os.path.join(buchPath, 'PickleFiles', 'buchiRef.pkl')
@@ -442,8 +444,11 @@ def fixEvents(EvSTL):
     for i in range(np.size(envInputs,0)):
         allInputs = re.split('( and | or )',envInputs[i][1])
         for j in range(np.size(allInputs,0)):
-            if not ('<' in allInputs[j] and '<' in allInputs[j]) and allInputs[j] != ' and ' and allInputs[j] != ' or ':
-                cleanLabel = re.search('(?<=(\.)).+?(?=(\s|\)))',allInputs[j])[0]
+            if not ('<' in allInputs[j] or '>' in allInputs[j]) and allInputs[j] != ' and ' and allInputs[j] != ' or ':
+                try:
+                    cleanLabel = re.search('(?<=(\.)).+?(?=(\s|\)))',allInputs[j])[0]
+                except:
+                    print('here')
                 if not any(cleanLabel in sublist for sublist in inpLabels):
                     labelToApp = [envInputs[i][0], cleanLabel]
                     inpLabels.append(labelToApp)
