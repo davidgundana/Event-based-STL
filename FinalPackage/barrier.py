@@ -42,6 +42,10 @@ def totalBarrier(specattr, ind, indOfActive):
                         else:
                             bxt_i.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].bxt_i)
                             piRobot.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]])
+                elif specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].type == 'alw':
+                    if specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].bxt_i is not None:
+                        bxt_i.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].bxt_i)
+                        piRobot.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]])
             except:
                 print('fail')
                 pass
@@ -179,22 +183,24 @@ def alBarrier(pi, t, x, xR ,wall, roadmap, preF):
         # be commented out
         if signF == -1:
             if valOfFunc < (signF*.7+p):
-                bxt_i = 0
+                bxt_i = None
         else:
             if p >= 1:
                 if valOfFunc > (signF*1+p):
-                    bxt_i = 0
+                    bxt_i = None
             else:
                 if valOfFunc > (signF * 8*p):
-                    bxt_i = 0
-
-        bxt_i = 1*bxt_i
+                    bxt_i = None
+        if bxt_i is not None:
+            bxt_i = 1*bxt_i
         pi.bxt_i = bxt_i
     else:
         valP = [1.4 * p[0], (p[0] + p[1]) / 2, .6 * p[1]]
         coeff = np.polyfit(valP,[0,1,0],2)
         bxt_i = coeff[0]*eval(funcOf)**2 + coeff[1]*eval(funcOf) + coeff[2]
-
+    if bxt_i is not None:
+        if bxt_i <= .2:
+            print('here')
     return pi
 
 def partials(piRobot, x, xR, t, wall, roadmap, preF,bxtx):

@@ -8,7 +8,7 @@ from customQP import quadprog
 import runEvBasedSTL
 import time
 
-def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,text1, master):
+def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,text1, master,differential):
     # Check to see if you care about walls. If you do, find the closest point
     specattr = checkWall(specattr,roadmap,x)
 
@@ -17,8 +17,14 @@ def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,tex
     specattr = trackInputs(specattr, x, xR, t)
 
     # Evaluate the current state of the environment
-    specattr = evalProps(specattr, roadmap, x, xR, t, maxV,sizeU)
-
+    specattr = evalProps(specattr, roadmap, x, xR, t, maxV,sizeU,differential)
+    if np.sqrt((x[0]-xR[15])**2+(x[1]-xR[16])**2) < 1.3:
+        print('here')
+    try:
+        if not (specattr[0].props.pred2):
+            print('here')
+    except:
+        pass
     # Find Propositions to activate based on the current state and transitiosn to an accepting state
     specattr, props2Activate, potS, _,_ = act.activate(specattr,potS,roadmap, 0,[],x, xR,t, maxV, sizeU)
     print(props2Activate)
@@ -44,12 +50,11 @@ def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,tex
         [bPartialX, bPartialT] = barrier.partials(piRobot, x, xR, t, specattr[0].wall, roadmap, 0,bxtx)
         error = 0
         if np.any(bPartialX):
-            differential = 1
             if differential:
                 xReference = x[sizeState*(i-1):sizeState*i]
                 dyn = np.identity(sizeState)
                 dyn = dyn[:,1:]
-                dyn[0:3,0:2] = np.array([[np.cos(xReference[2]* np.pi / 180.),0],[np.sin(xReference[2]* np.pi / 180.),0],[0,1]])
+                dyn[0:3,0:2] = np.array([[np.cos(xReference[2]),0],[np.sin(xReference[2]),0],[0,1]])
                 A = -1 * np.dot(np.array(bPartialX), dyn)
             else:
                 A = -1 * np.dot(np.array(bPartialX), np.identity(3 * int(np.size(x) / 3)))
@@ -57,11 +62,11 @@ def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,tex
             if abs(bPartialT[0]) > 50:
                 bPartialT[0] = 0
 
-            alpha = 3
+            alpha = 1
             b = alpha * (bxtx) + bPartialT[0]
 
             nominals = getAllNoms(piRobot,maxV,differential, sizeU)
-            nom,error = getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU)
+            nom,error = getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU,x,differential)
 
     return nom,specattr, error
 
@@ -76,7 +81,7 @@ def getAllNoms(piRobot, maxV, differential,sizeU):
     nominals = np.vstack((nominals, sumNom))
     return nominals
 
-def getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU):
+def getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU,x,differential):
     # Anew = A[3 * i - 3:3 * i]
     # lbI = -maxV[3 * i - 3:3 * i]
     # ubI = maxV[3 * i - 3:3 * i]
@@ -92,10 +97,23 @@ def getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU):
         nominals = np.zeros((2, np.size(lbI)))
 
     H = 2*np.identity(np.size(Anew))
-    f = np.array([-2 * nominals[1, 0], -2 * nominals[1, 1], -2 * nominals[1, 2], -2 * nominals[1, 3], -2 * nominals[1, 4]]).T
+    # f = np.array([-2 * nominals[1, 0], -2 * nominals[1, 1], -2 * nominals[1, 2], -2 * nominals[1, 3], -2 * nominals[1, 4]]).T
+    f = -2*nominals[1,:]
 
-    qp = quadprog(H, f, Anew, b, x0, lbI, ubI,bPartialX)
+    qp = quadprog(H, f, Anew, b, x0, lbI, ubI,bPartialX,x,differential)
     nomInd = qp.result.x
+    if not differential:
+        # convert to v omega
+        newNom = helperFuncs.feedbackLin(nomInd[0], nomInd[1], x[2], .1, maxV[0])
+        if newNom[1] != 0 and nomInd[2] !=0:
+            print('confict')
+        nomRet = np.zeros((1,5))
+        nomRet[0,1:] = nomInd[-4:]
+        if newNom[1] == 0:
+            nomRet[0,0] = newNom[0]
+        else:
+            nomRet[0,0:2] = newNom
+        nomInd = nomRet[0]
 
     if not qp.result.success:
         print('Specification violated')
@@ -104,7 +122,10 @@ def getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU):
         # nom[0][3 * i - 2] = 0
         # nom[0][3 * i - 1] = 0
     else:
-        nom[0][sizeU*(i-1):sizeU*i] = nomInd
+        if differential:
+            nom[0][sizeU*(i-1):sizeU*i] = nomInd
+        else:
+            nom[0][(sizeU-1)*(i-1):(sizeU-1)*i] = nomInd
 
     return nom, error
 def checkWall(specattr,roadmap,x):
@@ -149,7 +170,7 @@ def findPoint(roadmap,x):
 
     return wall
 
-def evalProps(specattr, roadmap, x,xR,t,maxV,sizeU):
+def evalProps(specattr, roadmap, x,xR,t,maxV,sizeU,differential):
     for i in range(np.size(specattr)):
         props = specattr[i].props
         # Find the values of all parameters
@@ -177,6 +198,15 @@ def evalProps(specattr, roadmap, x,xR,t,maxV,sizeU):
                     inputTime = specattr[i].Pi_mu[j].t_e
                     if t >= specattr[i].Pi_mu[j].a + inputTime and t <= specattr[i].Pi_mu[j].b + inputTime and specattr[i].Pi_mu[j].currentTruth:
                         specattr[i].Pi_mu[j].satisfied = 1
+                    # elif t < specattr[i].Pi_mu[j].a + inputTime and t < specattr[i].Pi_mu[j].b:
+                    #     # should make prop true because outside of bound
+                    #     if j == 0:
+                    #         print('here')
+                    #     exec(specattr[i].Pi_mu[j].prop_label + '=1')
+                #
+                # elif t < specattr[i].Pi_mu[j].a or t >= specattr[i].Pi_mu[j].b:
+                #     exec(specattr[i].Pi_mu[j].prop_label + '=1')
+
                 try:
                     if specattr[i].Pi_mu[j].satisfied:
                         exec(specattr[i].Pi_mu[j].prop_label + '=1')
@@ -191,11 +221,13 @@ def evalProps(specattr, roadmap, x,xR,t,maxV,sizeU):
                 signF = -specattr[i].Pi_mu[j].signFS[0]
                 specattr[i].Pi_mu[j].distFromSafe = cost + signF * specattr[i].Pi_mu[j].p
             else:
+                if t >= 10:
+                    print('here')
                 rob =  specattr[i].Pi_mu[j].robotsInvolved[0]
-                nomR, cost = getNom(specattr[i].Pi_mu[j], roadmap, x, xR,maxV[sizeU * rob - sizeU:sizeU*rob],sizeU)
+                nomR, cost = getNom(specattr[i].Pi_mu[j], roadmap, x, xR,maxV[sizeU * rob - sizeU:sizeU*rob],sizeU,differential)
                 signF = specattr[i].Pi_mu[j].signFS[0]
                 specattr[i].Pi_mu[j].distFromSafe = cost + signF *  specattr[i].Pi_mu[j].p
-                specattr[i].Pi_mu[j].time2Finish = cost / maxV[sizeU * rob - sizeU]
+                specattr[i].Pi_mu[j].time2Finish = specattr[i].Pi_mu[j].distFromSafe / maxV[sizeU * rob - sizeU]
             specattr[i].Pi_mu[j].nom[1, 0:np.size(nomR)] = nomR
     return specattr
 

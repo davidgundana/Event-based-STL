@@ -481,6 +481,8 @@ def LTL2Buchi(gamma, buchiFile,bypass):
         print('LTL Specification: ' + gamma)
         # Generate Buchi automaton and save
         buch = spot.translate(gamma, 'BA', 'deterministic', 'complete', 'sbacc')
+        # buch = spot.translate(gamma, 'BA', 'deterministic', 'sbacc')
+
         accepting = find_accepting_states(buch.to_str('dot'))
         print('Number of states: ' + str(buch.num_states()))
         print('Number of edges: ' + str(buch.num_edges()))

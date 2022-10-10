@@ -3,7 +3,7 @@ import numpy as np
 import re
 from math import fabs, pi
 
-def getNom(pi_mu, roadmap, x, xR, maxV,sizeU):
+def getNom(pi_mu, roadmap, x, xR, maxV,sizeU,differential):
     nom = np.zeros((1,sizeU))
     if np.size(pi_mu.point) > 1:
         avoidWallsInPath = 1
@@ -80,12 +80,11 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU):
             nom[0,0:2] = np.array([point1,point2]) - startPos
             # nom = np.hstack((nom, 0))
             cost = np.sqrt((point1 - startPos[0]) ** 2 + (point2 - startPos[1]) ** 2)
-
-        newNom = helperFuncs.feedbackLin(nom[0,0],nom[0,1],x[3 * (pi_mu.robotsInvolved[0] - 1) +2],.1,maxV[0])
-        nom[0,0:2] = newNom
+        if differential:
+            newNom = helperFuncs.feedbackLin(nom[0,0],nom[0,1],x[3 * (pi_mu.robotsInvolved[0] - 1) +2],.4,maxV[0])
+            nom[0,0:2] = newNom
 
     else:
-
         if np.size(pi_mu.point) > 0:
             indOfI = int(re.search('(?<=\[)\d+(?=\])', pi_mu.dir[0])[0])
             goal = eval(str(pi_mu.point[0]))
@@ -95,8 +94,6 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU):
                 goal = pi_mu.p + pi_mu.signFS[0]*1
             except:
                 print('here')
-
-
 
         if indOfI == 2:
             goal = transform_to_pipi(goal)[0]
@@ -112,7 +109,11 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU):
 
         if nominal > maxV[indOfI-1]:
             nominal = maxV[indOfI-1]
-        nom[0,indOfI-1] = nominal
+        if differential:
+            nom[0,indOfI-1] = nominal
+        else:
+            nom[0,indOfI] = nominal
+
         cost = nominal
     return nom, cost
 

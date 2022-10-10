@@ -408,13 +408,14 @@ def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU):
 
         #find the transition that is being made based on the conditions
         conditions = specattr[b].buchiStates[potS[b]].cond
-        evalCond = eval(','.join(conditions), {'__builtins__': None}, {'props': props})
-
+        try:
+            evalCond = eval(','.join(conditions), {'__builtins__': None}, {'props': props})
+        except:
+            print('here')
         evalCond = np.multiply(evalCond,1)
 
         result = np.array(specattr[b].buchiStates[potS[b]].result)
         potentialNextStates = result[np.where(evalCond == 1)[0]]
-
         # First find all accepting states that can be reached given uncontrollable propositions
         reachableAcceptCycle = findAcceptingCycle(specattr[b])
 
@@ -425,7 +426,7 @@ def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU):
                 try:
                     allPaths = specattr[b].nRoutes[potState][reachableAcceptCycle[j]]
                 except:
-                    print(props.pred0,props.pred1,props.pred2,props.pred3,props.pred4,props.pred5,props.pred6,props.pred7,props.pred8)
+                    # print(props.pred0,props.pred1,props.pred2,props.pred3,props.pred4,props.pred5,props.pred6,props.pred7,props.pred8)
                     allPaths = specattr[b].nRoutes[potState][j]
 
                 paths2Consider.append(allPaths)
@@ -490,14 +491,18 @@ def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU):
                     for j in range(np.size(transitionOptions, 0)):
                         propRef.extend([i for i, x in enumerate(transitionOptions[j, :-1]) if x == 1])
 
-        allTransitions = np.unique(allTransitionsWithState[1:, :-1], axis=0)
+        allTransitions, idx = np.unique(allTransitionsWithState[1:, :-1], axis=0,return_index=True)
+        allTransitions = allTransitionsWithState[1:, :-1][np.sort(idx)]
         allTransitionsWithState = allTransitionsWithState[1:, :]
         # check if any propositions have until tag
         allTransitions = checkUntil(specattr[b], allTransitions)
 
         # first we choose the transition with the most infinities. this is the highest robustness
         numMax = np.count_nonzero(np.isinf(allTransitions), axis=1)
-        maxLoc = np.argwhere(numMax == np.amax(numMax)).ravel()
+        try:
+            maxLoc = np.argwhere(numMax == np.amax(numMax)).ravel()
+        except:
+            print('here')
         ids = []
         if np.size(maxLoc) == 1:
             # only one maximum robustness

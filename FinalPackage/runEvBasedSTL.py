@@ -40,7 +40,11 @@ class formData:
         self.freq = 0 #Frequency of simulatiom
         self.maxV = 0 #Maximum velocity
         self.sizeState = 3
-        self.sizeU = 5
+        self.differentialD = 0
+        if self.differentialD:
+            self.sizeU = 5
+        else:
+            self.sizeU = 6
         self.wheel2Center =.4
         self.offsetX = -.05
         self.armZero = .19
@@ -57,7 +61,7 @@ class formData:
         my_dir2 = os.path.join(my_dir0, 'buchiRef.txt')
         my_dir3 = os.path.join(my_dir0, 'Maps', 'openMap.txt')
         my_dir4 = os.path.join(my_dir0, 'Maps', 'openNodes.txt')
-        my_dir = os.path.join(my_dir0, 'Specs', 'ICRA2023Spec4.txt')
+        my_dir = os.path.join(my_dir0, 'Specs', 'specTest.txt')
         my_dir5 = os.path.join(my_dir0, 'Maps', 'mapNodes.pkl')
         my_dir6 = os.path.join(my_dir0, 'Maps', 'mapNodeConnections.pkl')
         self.positions = {}
@@ -67,11 +71,10 @@ class formData:
         self.objectPosition3 = {}
 
         #NRI ROUTE 1 DEFAULTS
-        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2, thetaOrient2,thirdObjectX, thirdObjectY, thirdObjectZ, dist2Obj2, thetaOrient2]
-        self.default = np.array(['1', '5', '0.2,0.2,0.05,0.07,12', '9,9,.342,0,0,75', '0,0,0.025,0,-2,-2,-2,0,0,0,0,0,0,0,0'])
-        #NRI ROUTE 2 DEFAULTS
-        # self.default = np.array(['1', '5', '1.5,1.5,15', '0.12,67.55,0', '0.12,62,0'])
-
+        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2, thetaOrient2,thirdObjectX, thirdObjectY, thirdObjectZ, dist2Obj2, thetaOrient2, obstaclex1, obstacley1]
+        self.default = np.array(['1', '5', '0.2,0.2,0.05,0.07,12', '6,6,.342,0,0,75', '0,0,0.025,0,-2,-2,-2,0,0,0,0,0,0,0,0,2.2,2'])
+        if not self.differentialD:
+            self.default[2] = '0.2,0.2,0.2,0.05,0.07,12'
         self.filename1 = my_dir  # Directory of Specification
         self.filename2 = my_dir2
         self.filename3 = my_dir3
@@ -83,7 +86,7 @@ class formData:
             self.bypassbuchi = 0
         except:
             self.bypassbuchi = 1
-        self.bypassbuchi = 1
+        # self.bypassbuchi = 1
         self.preFailure = 0
         self.State = [] #pre-allocate state
         self.Conflicts = [] #pre-allocate conflicts
@@ -171,7 +174,7 @@ class formData:
         # Run prepare Spec
         Pi_mu, psi, inpRef, inpLabels,evProps,gamma = prep.prepSpec(psi,self.sizeState, self.sizeU)
         b_gamma = prep.getBuchi(Pi_mu,psi, self.filename2, text1, master, inpRef, inpLabels,evProps,gamma,self.bypassbuchi )
-        self.psiRef = psi
+        self.psiRef = gamma
         # b_gamma = prep.prepSpec(psi, self.filename2, text1, master,self.sizeState, self.sizeU,1)
 
         # Prepare roadmap
@@ -298,6 +301,7 @@ class formData:
         self.robotArc = {}
         self.robotArm = {}
         self.objects = {}
+        self.objects2 = {}
 
         self.cm = plt.get_cmap('jet')
         for i in range(f.M):
@@ -331,6 +335,8 @@ class formData:
         # plt.ion()
         ax.plot(xwall, ywall, color="black")
         self.objects, = ax.plot(self.initXRef[0], self.initXRef[1],'o', color="blue")
+        circle1 = plt.Circle((self.initXRef[15], self.initXRef[16]), 1)
+        ax.add_patch(circle1)
         self.x = self.initX
         self.xR = self.initXRef
         self.potS = [0]
@@ -382,6 +388,7 @@ class formData:
                     self.xR[10] = self.objectPosition3[2]
                     self.xR[11] = self.objectPosition3[0]
                     self.xR[12] = self.objectPosition3[1] - self.offsetZ3
+
                 print(np.sqrt((self.x[0] - self.xR[10]) ** 2 + (self.x[1] - self.xR[11]) ** 2))
                 print(self.specattr[0].parameters)
                 print('X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}, oX1: {}, oY1: {}, oT1: {}, oX2: {}, oY2: {}, oT2: {}'.format(
@@ -389,7 +396,7 @@ class formData:
                     round(self.x[5],2), round(self.xR[0],2),round(self.xR[1],2),round(self.xR[2],2), round(self.xR[5],2),round(self.xR[6],2),round(self.xR[7],2)))
                 self.checkInputs()
                 self.updateRef()
-                nom, self.specattr,error = control.synthesis(self.specattr, self.potS, self.roadmap, self.x, self.xR, self.t, self.maxV, self.sizeState,self.sizeU, self.preFailure, self.text1, self.master)
+                nom, self.specattr,error = control.synthesis(self.specattr, self.potS, self.roadmap, self.x, self.xR, self.t, self.maxV, self.sizeState,self.sizeU, self.preFailure, self.text1, self.master,self.differentialD)
                 v = np.zeros((1, int(np.size(self.x)/self.sizeState)))
                 omega = np.zeros((1, int(np.size(self.x)/self.sizeState)))
                 deltaD = np.zeros((1, int(np.size(self.x)/self.sizeState)))
@@ -506,14 +513,17 @@ class formData:
             props = self.specattr[i].evProps
             x = self.x
             xR = self.xR
-            for j in range(np.size(self.specattr[i].inpRef,0)):
-                mess = self.specattr[i].inpRef[j][1]
-                if eval(mess):
-                    self.specattr[i].input[2 * j] = 1
-                    if self.specattr[i].input[2 * j + 1] == 0 or self.specattr[i].input[2 * j + 1] > self.t:
-                        self.specattr[i].input[2 * j + 1] = self.t
-                else:
-                    self.specattr[i].input[2 * j] = 0
+            try:
+                for j in range(np.size(self.specattr[i].inpRef,0)):
+                    mess = self.specattr[i].inpRef[j][1]
+                    if eval(mess):
+                        self.specattr[i].input[2 * j] = 1
+                        if self.specattr[i].input[2 * j + 1] == 0 or self.specattr[i].input[2 * j + 1] > self.t:
+                            self.specattr[i].input[2 * j + 1] = self.t
+                    else:
+                        self.specattr[i].input[2 * j] = 0
+            except:
+                print('here')
         # Check to see what if inputs have changed
 
     def updateRef(self):
@@ -535,7 +545,7 @@ class formData:
         newSTL = re.sub('\\n','',newSTL)
         if self.psi != newSTL:
             print('Change in Psi')
-            newPreds,psiNew,inpRef,inpLabels,evProps,gamma = prep.prepSpec(newSTL, self.sizeState, self.sizeU)
+            newPreds,psi,inpRef,inpLabels,evProps,psiNew = prep.prepSpec(newSTL, self.sizeState, self.sizeU)
             oldPreds = self.specattr[0].Pi_mu
             newParameters = []
             for i in range(np.size(oldPreds)):
@@ -553,8 +563,8 @@ class formData:
                     self.specattr[0].Pi_mu[i].pred = newPreds[i].pred
                     self.specattr[0].Pi_mu[i].signFS = newPreds[i].signFS
                 newParameters.append(self.specattr[0].Pi_mu[i].pred[0])
-            self.specattr[0].parameters = newParameters
-            self.specattr[0].inpRef = inpRef
+            self.specattr[0].parameters = newParameters[:len(self.specattr[0].parameters)]
+            self.specattr[0].inpRef = inpRef[:len(self.specattr[0].inpRef)]
             if np.size(newPreds) != np.size(oldPreds):
                 psiToAdd = psiNew[len(self.psiRef):]
                 gamma = re.findall('(\&|\|)',psiToAdd)[0]
@@ -577,7 +587,7 @@ class formData:
                 for i in range(np.size(inpLabels,0)):
                     if inpLabels[i][0] in newSpec:
                         inpLabelsNew.append(inpLabels[i])
-                b_gamma = prep.getBuchi(Pi_mu, newSpec, '', '', '', inpRef, inpLabels, evProps)
+                b_gamma = prep.getBuchi(Pi_mu, newSpec, '', '', '', inpRef, inpLabels, evProps, newSpec ,0)
                 inpRefAdd = []
                 inpLabelsAdd = []
                 for j in range(np.size(propositions)):
@@ -747,8 +757,8 @@ class formData:
         self.master.destroy()
 
 if __name__ == "__main__":
-    realRobots = 1
-    logData = 1
+    realRobots = 0
+    logData = 0
     if realRobots:
         import stretch_body.robot
         robot = stretch_body.robot.Robot()

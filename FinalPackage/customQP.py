@@ -6,12 +6,14 @@ from scipy import optimize
 
 class quadprog(object):
 
-    def __init__(self,H,f,A, b, x0, lb, ub,bPartialX):
+    def __init__(self,H,f,A, b, x0, lb, ub,bPartialX,state,differential):
         self.H = H
         self.f = f
         self.A = A
         self.b = b
         self.x0 = x0
+        self.state = state
+        self.differential = differential
         self.bPartialX = bPartialX
         self.bnds = tuple([(lb[x], ub[x]) for x in range(np.size(x0))])
         # call solver
@@ -21,7 +23,10 @@ class quadprog(object):
         return 0.5*np.dot(np.dot(x.T, self.H), x) + np.dot(self.f.T, x)
 
     def solver(self):
-        cons = ({'type': 'ineq', 'fun': lambda x: self.b - np.dot(-1 * np.dot(np.array(self.bPartialX), np.array([[np.cos(x[2]),0,0,0,0],[np.sin(x[2]),0,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0],[0,0,0,0,1]])), x)})
+        if self.differential:
+            cons = ({'type': 'ineq', 'fun': lambda x: self.b - np.dot(-1* np.dot(np.array(self.bPartialX), np.array([[np.cos(self.state[2]+x[2]),0,0,0,0],[np.sin(self.state[2]+x[2]),0,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0],[0,0,0,0,1]])), x)})
+        else:
+            cons = ({'type': 'ineq', 'fun': lambda x: self.b - np.dot(self.A, x)})
         optimum = optimize.minimize(self.objective_function,
                                     x0          = self.x0.T,
                                     bounds      = self.bnds,

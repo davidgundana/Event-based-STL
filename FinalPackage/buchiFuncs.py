@@ -39,8 +39,11 @@ def buchiIntersect(buchi1, s01, buchi2, s02):
                 for j in range(np.size(buchi2[sOf2].result)):
                     n1 = buchi1[sOf1].result[i]
                     n2 = buchi2[sOf2].result[j]
-                    formula1 = buchi1[sOf1].condCNF[n1]
-                    formula2 = buchi2[sOf2].condCNF[n2]
+                    try:
+                        formula1 = buchi1[sOf1].condCNF[n1]
+                        formula2 = buchi2[sOf2].condCNF[n2]
+                    except:
+                        continue
                     formula1Word = buchi1[sOf1].cond[n1]
                     formula2Word = buchi2[sOf2].cond[n2]
                     newFormula = []
@@ -74,6 +77,7 @@ def buchiIntersect(buchi1, s01, buchi2, s02):
 
         states = copy.deepcopy(new_list)
         new_list = []
+
     accepting_states = np.unique(accepting3)
     graph = np.zeros((np.size(buchi3), np.size(buchi3)))
     for i in range(np.size(buchi3)):
@@ -129,7 +133,18 @@ def buchiIntersect(buchi1, s01, buchi2, s02):
             goTo = specattr.acceptingWithCycle[j]
             try:
                 allPaths = findNRoutes(specattr.graph, i, goTo)
-                tempRoute.append(allPaths)
+                shortestLength = len(min(allPaths, key=len))
+                allPaths = [path for path in allPaths if len(path) == shortestLength]
+
+                #double check first transition
+                if int(specattr.graph[allPaths[0][0],allPaths[0][1]]):
+                    tempRoute.append(allPaths)
+                else:
+                    if int(specattr.graph[allPaths[0][-1],allPaths[0][-2]]):
+                        allPaths[0].reverse()
+                        tempRoute.append(allPaths)
+                    else:
+                        tempRoute.append([])
             except:
                 pass
         specattr.nRoutes[i] = tempRoute
@@ -156,8 +171,14 @@ def findNRoutes(graph,startState, endState):
         if graph[startState,endState] == 1:
             allPaths.append([startState,endState])
         else:
-            (cost, rute) = matrixDijkstra.dijkstra(graph, startState, endState)
-            allPaths.append(rute.astype('int').tolist())
+            # Find states that can go to the accepting state
+            statesFrom = np.where(graph[:,startState]==1)[0]
+            for i in range(np.size(statesFrom)):
+                for path in k_shortest_paths(G, startState, statesFrom[i], numP):
+                    allPaths.append(path + [startState])
+
+            # (cost, rute) = matrixDijkstra.dijkstra(graph, startState, statesFrom[i])
+            # allPaths.append(rute.astype('int').tolist())
 
     return allPaths
 
