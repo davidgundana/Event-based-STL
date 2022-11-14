@@ -2,7 +2,7 @@ import numpy as np
 import re
 import matrixDijkstra
 
-def barrier(pi, x,xR, t, wall, roadmap, preF):
+def barrier(pi, x,xR, t, wall, roadmap, preF,linear):
     # Determine whether until, eventually, or always
     if pi.t_e == []:
         inputTime = 0
@@ -10,10 +10,11 @@ def barrier(pi, x,xR, t, wall, roadmap, preF):
         inputTime = pi.t_e
     # if pi.id == 7:
     #     print('here')
+
     if pi.type == 'ev':
         # If the interval has passed, then the barrier function doesnt matter
         if t >= pi.a + inputTime and t <= pi.b + inputTime and not pi.currentTruth:
-            pi = evBarrier(pi, t, x, xR ,wall,roadmap, preF)
+            pi = evBarrier(pi, t, x, xR ,wall,roadmap, preF,linear)
         else:
             pi.bxt_i = None
     if pi.type == 'alw':
@@ -101,13 +102,17 @@ def partialTotalBarrier(piDis):
 
     return bxt
 
-def evBarrier(pi, t, x, xR ,wall,roadmap, preF):
+def evBarrier(pi, t, x, xR ,wall,roadmap, preF,linear):
     buffer = 5
+    if not linear and len(pi.dir) > 1:
+        x[0] += .02 * np.cos(x[2])
+        x[1] += .02 * np.sin(x[2])
     hxt = eval(pi.hxt)
     if pi.hxte == []:
         pi.hxte = hxt + buffer
     # print('hxt: ', hxt, 'hxte: ', pi.hxte, 'time: ', t-pi.t_e-pi.a)
     # if theres only one bound for the safe-set
+
     if np.size(np.where(pi.signFS[0] != 0)) == 1:
         try:
             bxt_i = eval(pi.cbf)
@@ -177,7 +182,7 @@ def alBarrier(pi, t, x, xR ,wall, roadmap, preF):
         signF = pi.signFS[0]
         # compute the barrier function
         valOfFunc = eval(pi.hxt)
-        bxt_i = 1.3 * signF * (-p + eval(pi.hxt))
+        bxt_i = 1 * signF * (-p + eval(pi.hxt))
 
         # This is optional. For speed, if the robot is "far enough" from violation, we will ignore this. Can
         # be commented out
@@ -189,7 +194,7 @@ def alBarrier(pi, t, x, xR ,wall, roadmap, preF):
                 if valOfFunc > (signF*1+p):
                     bxt_i = None
             else:
-                if valOfFunc > (signF * 8*p):
+                if valOfFunc > (signF * 12*p):
                     bxt_i = None
         if bxt_i is not None:
             bxt_i = 1*bxt_i
@@ -203,7 +208,7 @@ def alBarrier(pi, t, x, xR ,wall, roadmap, preF):
 #            print('here')
     return pi
 
-def partials(piRobot, x, xR, t, wall, roadmap, preF,bxtx):
+def partials(piRobot, x, xR, t, wall, roadmap, preF,bxtx,linear):
     delt = .01
     newx = list(x)
     bPartialX = []
@@ -211,7 +216,7 @@ def partials(piRobot, x, xR, t, wall, roadmap, preF,bxtx):
         piDis = []
         newx[i] = newx[i] + delt
         for k in range(np.size(piRobot)):
-            piDis.append(barrier(piRobot[k], newx, xR, t, wall, roadmap, 0))
+            piDis.append(barrier(piRobot[k], newx, xR, t, wall, roadmap, 0,linear))
         bTemp = partialTotalBarrier(piDis)
         bPartialX.append((bTemp - bxtx)/delt)
         newx = list(x)
@@ -221,7 +226,7 @@ def partials(piRobot, x, xR, t, wall, roadmap, preF,bxtx):
     for i in range(0,np.size(t)):
         newt = newt + delt
         for k in range(np.size(piRobot)):
-            piDis.append(barrier(piRobot[k], x, xR, newt, wall, roadmap, 0))
+            piDis.append(barrier(piRobot[k], x, xR, newt, wall, roadmap, 0,linear))
         bTemp = partialTotalBarrier(piDis)
         bPartialT.append((bTemp - bxtx)/delt)
         newt = t

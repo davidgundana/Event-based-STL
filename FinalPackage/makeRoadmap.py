@@ -19,21 +19,23 @@ class mapInfo():
     def createMap(self,filenames,text1,master):
         avoidWallsInPath = 1
         wallDistance = .03
-        map = np.loadtxt(filenames[0])
+        map = np.loadtxt(filenames[2])
         self.map = map
-        nodes = np.loadtxt(filenames[1])
+        nodes = np.loadtxt(filenames[3])
         self.nodes = nodes
 
-        if filenames[2] == "":
-            nodeGraph = []
-        else:
-            with open(filenames[2], 'rb') as input:
+        try:
+            with open(filenames[4], 'rb') as input:
                 nodeGraph = pickle.load(input)
-        if filenames[3] == "":
-            nodeConnections = []
-        else:
-            with open(filenames[3], 'rb') as input:
+        except:
+            nodeGraph = []
+
+        try:
+            with open(filenames[5], 'rb') as input:
                 nodeConnections = pickle.load(input)
+        except:
+            nodeConnections = []
+
         # Create a nodegraph using the nodes and map
         if len(nodeGraph) == 0:
             t1 = time.time()
@@ -68,7 +70,7 @@ class mapInfo():
             print('Total time to create roadmap was {} seconds'.format(time.time()-t1))
 
             my_dir = os.path.dirname(os.path.abspath(__file__))
-            mapName = os.path.split(filenames[0])[-1]
+            mapName = os.path.split(filenames[2])[-1]
             mapNameSave = re.split('\.',mapName)[0] + 'Nodes.pkl'
             pickle_file_path = os.path.join(my_dir, 'Maps', mapNameSave)
             with open(pickle_file_path, 'wb') as output:
@@ -116,7 +118,7 @@ class mapInfo():
             print('Total time to create node connections in roadmap was {} seconds'.format(time.time()-t1))
 
             my_dir = os.path.dirname(os.path.abspath(__file__))
-            mapName = os.path.split(filenames[0])[-1]
+            mapName = os.path.split(filenames[2])[-1]
             mapNameSave = re.split('\.',mapName)[0] + 'NodeConnections.pkl'
             pickle_file_path = os.path.join(my_dir, 'Maps', mapNameSave)
             with open(pickle_file_path, 'wb') as output:

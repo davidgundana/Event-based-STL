@@ -30,94 +30,55 @@ import control
 import helperFuncs
 import forwardBuchi
 from datetime import datetime
+import signal
 
-class formData:
+
+class runSpec:
     def __init__(self,robot,logData):
         self.robot = robot
-        self.M = 2 #Number of Robots
-        self.N = 4  # Number of Inputs
-        self.P = 1 #Number of Humans/dynamic obstacles
-        self.freq = 0 #Frequency of simulatiom
-        self.maxV = 0 #Maximum velocity
-        self.sizeState = 3
-        self.differentialD = 0
-        if self.differentialD:
-            self.sizeU = 5
-        else:
-            self.sizeU = 6
+        self.sizeState = 6 # state size of a robot
+        self.sizeU = 6 # size of the control input
+        self.sizeU = 5 # size of the control input
+
+        self.initialState = '6,6,.342,0,0,30' # initial state of the system
+        self.maxV = '0.2,0.2,0.2,0.05,0.07,12' #Maximum velocity
+        self.maxV = '0.2,0.2,0.05,0.07,12' #Maximum velocity
+
+        # stretch reference values
+        self.initialStateRef = '0,0,0.025,0,-2,-2,-2,0,0,0,0,0,0,0,0,2.2,2' # Initial state of reference objects
+        self.linearControl = 1 # Control affine system (default is True)
+        self.running = True # initialize the system to run
+        self.logData = logData # Log data flag
+        self.modifyTime = 0 # Keeps track of the time to modify a specification
+        if logData:
+            self.log = []
+
+        # Stretch Robot Parameters
         self.wheel2Center =.4
         self.offsetX = -.05
         self.armZero = .19
-        self.offsetZ = 0.08
-        self.offsetZ2 = -0.15
-        self.offsetZ3 = .05
-        self.running = True
-        self.logData = logData
-        self.modifyTime = 0
-        if logData:
-            self.log = []
-        # Default spec location
-        my_dir0 = os.path.dirname(os.path.abspath(__file__))
-        my_dir2 = os.path.join(my_dir0, 'buchiRef.txt')
-        my_dir3 = os.path.join(my_dir0, 'Maps', 'openMap.txt')
-        my_dir4 = os.path.join(my_dir0, 'Maps', 'openNodes.txt')
-        my_dir = os.path.join(my_dir0, 'Specs', 'ICRA2023Spec4.txt')
-        my_dir5 = os.path.join(my_dir0, 'Maps', 'mapNodes.pkl')
-        my_dir6 = os.path.join(my_dir0, 'Maps', 'mapNodeConnections.pkl')
-        self.positions = {}
-        self.rotations = {}
-        self.objectPosition = {}
-        self.objectPosition2 = {}
-        self.objectPosition3 = {}
+        self.offsetZ = [0.08, -.15, .05]
 
-        #NRI ROUTE 1 DEFAULTS
-        # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2, thetaOrient2,thirdObjectX, thirdObjectY, thirdObjectZ, dist2Obj2, thetaOrient2, obstaclex1, obstacley1]
-        self.default = np.array(['1', '5', '0.2,0.2,0.05,0.07,12', '6,6,.342,0,0,75', '0,0,0.025,0,-2,-2,-2,0,0,0,0,0,0,0,0,2.2,2'])
-        if not self.differentialD:
-            self.default[2] = '0.2,0.2,0.2,0.05,0.07,12'
-        self.filename1 = my_dir  # Directory of Specification
-        self.filename2 = my_dir2
-        self.filename3 = my_dir3
-        self.filename4 = my_dir4
-        self.filename5 = ''
-        self.filename6 = ''
+        # Default spec location
+        mainDirectory = os.path.dirname(os.path.abspath(__file__))
+        self.filenames = []
+        self.filenames.append(os.path.join(mainDirectory, 'Specs', 'ICRA2023Spec4.txt'))
+        self.filenames.append(os.path.join(mainDirectory, 'buchiRef.txt'))
+        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'openMap.txt'))
+        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'openNodes.txt'))
+        self.filenames.append(os.path.join(mainDirectory, 'Maps', ''))
+        self.filenames.append(os.path.join(mainDirectory, 'Maps', ''))
+
         try:
             import spot
             self.bypassbuchi = 0
         except:
             self.bypassbuchi = 1
-        self.bypassbuchi = 1
         self.preFailure = 0
-        self.State = [] #pre-allocate state
-        self.Conflicts = [] #pre-allocate conflicts
-        self.controllableProp = [] #pre-allocate controllable propositions
-        self.initX = [] #pre-allocate initial position
-        self.initXRef = [] #pre-allocate position od dynamic obstacles
-
-    def upload1(self,master):
+    def upload(self,master):
         self.filename1 = tk.filedialog.askopenfilename()
-        tk.Label(master, text='                               ').grid(row=5, column =2)
-        tk.Label(master, text=os.path.split(self.filename1)[-1]).grid(row=5, column =2)
-    def upload2(self,master):
-        self.filename2 = tk.filedialog.askopenfilename()
-        tk.Label(master, text='                               ').grid(row=7, column =2)
-        tk.Label(master, text=os.path.split(self.filename2)[-1]).grid(row=7, column =2)
-    def upload3(self,master):
-        self.filename3 = tk.filedialog.askopenfilename()
-        tk.Label(master, text='                               ').grid(row=9, column =2)
-        tk.Label(master, text=os.path.split(self.filename3)[-1]).grid(row=9, column =2)
-    def upload4(self,master):
-        self.filename4 = tk.filedialog.askopenfilename()
-        tk.Label(master, text='                               ').grid(row=10, column =2)
-        tk.Label(master, text=os.path.split(self.filename4)[-1]).grid(row=10, column =2)
-    def upload5(self,master):
-        self.filename5 = tk.filedialog.askopenfilename()
-        tk.Label(master, text='                               ').grid(row=11, column =2)
-        tk.Label(master, text=os.path.split(self.filename5)[-1]).grid(row=11, column =2)
-    def upload6(self,master):
-        self.filename6 = tk.filedialog.askopenfilename()
-        tk.Label(master, text='                               ').grid(row=12, column =2)
-        tk.Label(master, text=os.path.split(self.filename6)[-1]).grid(row=12, column =2)
+        tk.Label(master[0], text='                               ').grid(row=master[1], column =2)
+        tk.Label(master[0], text=os.path.split(self.filename1)[-1]).grid(row=master[1], column =2)
     def enableBypass(self):
         self.bypassbuchi = 1
     def enablePreFailure(self):
@@ -129,28 +90,15 @@ class formData:
         text1.configure(state='disabled')
 
         master.update()
-    def startButton(self):
-        self.Start = 1
-
     def userParams(self,results):
         # Update the values based on what was given in the window
-        self.M = int(results[0].get())
-        self.freq = results[1].get()
-        self.maxV = np.fromstring(results[2].get(), dtype=float, sep=',')
-        self.initX = results[3].get()
-        self.initX = self.initX.split(',')
-        self.initX = [float(i) for i in self.initX]
-        self.initX = np.array(self.initX)
-        self.initXRef = results[4].get()
-        self.initXRef = self.initXRef.split(',')
-        self.sizeState = int(np.size(self.initX)/self.M)
-        if self.initXRef[0] == '':
-            self.initXRef = []
-        else:
-            self.initXRef = [float(i) for i in self.initXRef]
-        self.initXRef = np.array(self.initXRef)
-        self.name = re.split('\.',os.path.split(self.filename1)[-1])[0]
-        self.P = int(np.floor(np.size(self.initXRef)/3))
+        self.sizeState = int(results[0].get())
+        self.initX = np.array([float(i) for i in results[1].get().split(',')])
+        self.sizeU = int(results[2].get())
+        self.M = int(self.sizeState/np.size(self.initX))
+        self.maxV = np.fromstring(results[3].get(), dtype=float, sep=',')
+        self.initXRef = np.array([float(i) for i in results[4].get().split(',')])
+        self.name = re.split('\.',os.path.split(self.filenames[0])[-1])[0]
 
     def userData(self, results):
         text1 = results[5]
@@ -164,22 +112,18 @@ class formData:
         self.userParams(results)
 
         #Read in the Event-Based STL formula
-        x1 = open(self.filename1, 'r').readlines()
+        x1 = open(self.filenames[0], 'r').readlines()
         self.STL_list = np.asarray(x1).reshape(-1, 1)
 
         psi = self.STL_list[0][0]
         prepTime = time.time()
 
-        # Initialize Set of Buchis and potential states
-        # Run prepare Spec
-        Pi_mu, psi, inpRef, inpLabels,evProps,gamma = prep.prepSpec(psi,self.sizeState, self.sizeU)
-        b_gamma = prep.getBuchi(Pi_mu,psi, self.filename2, text1, master, inpRef, inpLabels,evProps,gamma,self.bypassbuchi,1 )
-        self.psiRef = gamma
-        # b_gamma = prep.prepSpec(psi, self.filename2, text1, master,self.sizeState, self.sizeU,1)
+        # Abstract predicates and formula as an LTL formula
+        Pi_mu, psi, inpRef, inpLabels,evProps,self.psiRef = prep.prepSpec(psi,self.sizeState, self.sizeU)
+        b_gamma = prep.getBuchi(Pi_mu, self.filenames[1], text1, master, inpRef, inpLabels,evProps,self.psiRef,self.bypassbuchi)
 
         # Prepare roadmap
-        filenames = [self.filename3, self.filename4, self.filename5, self.filename6]
-        roadmap = makeRoadmap.mapInfo(filenames,text1,master)
+        roadmap = makeRoadmap.mapInfo(self.filenames,text1,master)
 
         del self.CheckVar
         print('Total prep time: {}'.format(time.time()-prepTime))
@@ -190,10 +134,8 @@ class formData:
                        variable=self.CheckVar2).grid(row=14,column=2,sticky=tk.W,pady=4)
         self.gamma = b_gamma
         specParams = [self.gamma, roadmap, master,text1]
-        import signal
         signal.signal(signal.SIGINT, self.sigint_handler)
         tk.Button(master, text='Execute', command=(lambda e=specParams: self.runSpec(e))).grid(row=14, column=3, sticky=tk.W, pady=6)
-        #master.destroy()
 
     def receive_rigid_body_frame(self, id, position, rotation_quaternion):
         # Position and rotation received
@@ -213,7 +155,6 @@ class formData:
             self.objectPosition2 = position
         if id == 33 and position != []:
             self.objectPosition3 = position
-
 
     def transform_to_pipi(self,input_angle):
         revolutions = int((input_angle + np.sign(input_angle) * pi) / (2 * pi))
@@ -380,29 +321,25 @@ class formData:
                     self.x[5] = self.robot.end_of_arm.status['stretch_gripper']['pos_pct']
                     self.xR[0] = self.objectPosition[2]
                     self.xR[1] = self.objectPosition[0]
-                    self.xR[2] = self.objectPosition[1] - self.offsetZ
+                    self.xR[2] = self.objectPosition[1] - self.offsetZ[0]
                     #depot position
                     self.xR[5] = self.objectPosition2[2]
                     self.xR[6] = self.objectPosition2[0]
-                    self.xR[7] = self.objectPosition2[1] - self.offsetZ2
+                    self.xR[7] = self.objectPosition2[1] - self.offsetZ[1]
                     self.xR[10] = self.objectPosition3[2]
                     self.xR[11] = self.objectPosition3[0]
-                    self.xR[12] = self.objectPosition3[1] - self.offsetZ3
+                    self.xR[12] = self.objectPosition3[1] - self.offsetZ[2]
 
-                print(np.sqrt((self.x[0] - self.xR[10]) ** 2 + (self.x[1] - self.xR[11]) ** 2))
-                print(self.specattr[0].parameters)
-                print('X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}, oX1: {}, oY1: {}, oT1: {}, oX2: {}, oY2: {}, oT2: {}'.format(
-                    round(self.x[0],2),round(self.x[1],2),round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),
-                    round(self.x[5],2), round(self.xR[0],2),round(self.xR[1],2),round(self.xR[2],2), round(self.xR[5],2),round(self.xR[6],2),round(self.xR[7],2)))
+                # print(np.sqrt((self.x[0] - self.xR[10]) ** 2 + (self.x[1] - self.xR[11]) ** 2))
+                # print(self.specattr[0].parameters)
+                print('t: {}, X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}'.format(round(self.t,2),round(self.x[0],2),round(self.x[1],2),
+                    round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),round(self.x[5],2)))
                 self.checkInputs()
                 self.updateRef()
-                nom, self.specattr,error = control.synthesis(self.specattr, self.potS, self.roadmap, self.x, self.xR, self.t, self.maxV, self.sizeState,self.sizeU, self.preFailure, self.text1, self.master,self.differentialD)
-                v = np.zeros((1, int(np.size(self.x)/self.sizeState)))
-                omega = np.zeros((1, int(np.size(self.x)/self.sizeState)))
-                deltaD = np.zeros((1, int(np.size(self.x)/self.sizeState)))
-                deltaZ = np.zeros((1, int(np.size(self.x)/self.sizeState)))
-                deltaGrip = np.zeros((1, int(np.size(self.x) / self.sizeState)))
-                if error:
+                t1 = time.time()
+                nom, self.specattr,error = control.synthesis(self.specattr, self.potS, self.roadmap, self.x, self.xR, self.t, self.maxV, self.sizeState,self.sizeU, self.preFailure, self.text1, self.master)
+                print('synth Time: ', time.time()-t1)
+                if error and self.robot is not None:
                     self.robot.base.set_velocity(v_m=0, w_r=0)
                     self.robot.arm.set_velocity(v_m=0)
                     self.robot.lift.set_velocity(v_m=0)
@@ -418,13 +355,9 @@ class formData:
                     self.robot.push_command()
                     print('stopping robot')
                     self.running = False 
-                for i in range(int(np.size(self.x)/self.sizeState)):
-                    v[0, i] = nom[0][3 * i]
-                    omega[0, i] = nom[0][3 * i + 1]
-                    deltaD[0,i] = nom[0][3*i+2]
-                    deltaZ[0,i] = nom[0][3*i+3]
-                    deltaGrip[0,i] = nom[0][3*i+4]
-                time.sleep(.02)
+                elif error:
+                    self.running = False
+
                 '''
                 End of process
                 '''
@@ -435,11 +368,11 @@ class formData:
                 loopTime = elapsedT
 
                 for i in range(int(self.M)):
-                    d = v[0][i]
-                    phi = omega[0][i]
-                    vD = deltaD[0][i]
-                    vZ = deltaZ[0][i]
-                    vGrip = deltaGrip[0][i]
+                    d = nom[0][3 * i]
+                    phi = nom[0][3 * i + 1]
+                    vD = nom[0][3 * i + 2]
+                    vZ = nom[0][3 * i + 3]
+                    vGrip = nom[0][3 * i + 4]
                     print('Vd: {}, vOmega: {}, vD: {},vZ: {}, vGrip: {}'.format(d,phi,vD,vZ,vGrip))
                     if self.logData:
                         nextRow = [self.t] + self.x.tolist() + nom[0].tolist() + self.xR.tolist()
@@ -454,14 +387,13 @@ class formData:
                         self.robot.arm.set_velocity(v_m=vD)
                         self.robot.lift.set_velocity(v_m=vZ)
                         self.robot.end_of_arm.move_by('stretch_gripper', vGrip)
-
                         self.robot.push_command()
                     else:
                         newPos = helperFuncs.integrateOdom([d,phi],self.x[3*i:3*i+3])
                         self.x[3 * i:3 * i + 3] = newPos
-                        self.x[3*i+3] += deltaD[0][i] * loopTime
-                        self.x[3*i+4] += deltaZ[0][i] * loopTime
-                        self.x[3*i+5] += deltaGrip[0][i] * loopTime
+                        self.x[3*i+3] += vD * loopTime
+                        self.x[3*i+4] += vZ * loopTime
+                        self.x[3*i+5] += vGrip * loopTime
 
             yield self.x
 
@@ -484,7 +416,6 @@ class formData:
             self.robotArm[str(i)].set_data(armX, armY)
             self.robotArm[str(i)].set_color(self.cm(round(x[self.sizeU*i+4]*232)))
             self.objects.set_data(self.xR[0],self.xR[1])
-
         return self.robots
 
     def pause_animation(self):
@@ -513,27 +444,21 @@ class formData:
             props = self.specattr[i].evProps
             x = self.x
             xR = self.xR
-            try:
-                for j in range(np.size(self.specattr[i].inpRef,0)):
-                    mess = self.specattr[i].inpRef[j][1]
-                    if eval(mess):
-                        self.specattr[i].input[2 * j] = 1
-                        if self.specattr[i].input[2 * j + 1] == 0 or self.specattr[i].input[2 * j + 1] > self.t:
-                            self.specattr[i].input[2 * j + 1] = self.t
-                    else:
-                        self.specattr[i].input[2 * j] = 0
-            except:
-                print('here')
-        # Check to see what if inputs have changed
+            for j in range(np.size(self.specattr[i].inpRef,0)):
+                mess = self.specattr[i].inpRef[j][1]
+                if eval(mess):
+                    self.specattr[i].input[2 * j] = 1
+                    if self.specattr[i].input[2 * j + 1] == 0 or self.specattr[i].input[2 * j + 1] > self.t:
+                        self.specattr[i].input[2 * j + 1] = self.t
+                else:
+                    self.specattr[i].input[2 * j] = 0
 
     def updateRef(self):
         # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2,thetaOrient2,,thirdObjectX, thirdObjectY, thirdObjectZ]
         # xy is on front face of robot. arm is in offsetX
         centroidPoint = helperFuncs.robot2global(self.x[0:3], [-self.offsetX, 0])
-
         self.xR[3] = np.arctan2(self.xR[1]-centroidPoint[1],self.xR[0]-centroidPoint[0]) + np.pi/2
         self.xR[3] = self.transform_to_pipi(self.xR[3])[0]
-        #print(self.xR[3])
         self.xR[4] = np.sqrt((self.x[0]-self.xR[0])**2 + (self.x[1]-self.xR[1])**2) - self.armZero
         self.xR[8] = np.sqrt((self.x[0]-self.xR[5])**2 + (self.x[1]-self.xR[6])**2) - self.armZero -.2
         self.xR[9] = np.arctan2(self.xR[6]-centroidPoint[1],self.xR[5]-centroidPoint[0]) + np.pi/2
@@ -587,7 +512,7 @@ class formData:
                 for i in range(np.size(inpLabels,0)):
                     if inpLabels[i][0] in newSpec:
                         inpLabelsNew.append(inpLabels[i])
-                b_gamma = prep.getBuchi(Pi_mu, newSpec, '', '', '', inpRef, inpLabels, evProps, newSpec ,0,0)
+                b_gamma = prep.getBuchi(Pi_mu, '', '', '', inpRef, inpLabels, evProps, newSpec ,0)
                 inpRefAdd = []
                 inpLabelsAdd = []
                 for j in range(np.size(propositions)):
@@ -601,7 +526,7 @@ class formData:
                     # Generate Buchi Intersect
                     for i in range(np.size(self.specattr)):
                         print('finding intersection')
-                        self.specattr[i] = buchiFuncs.buchiIntersect(self.specattr[i],self.potS[i], b_gamma,0)
+                        self.specattr[i], self.potS[i] = buchiFuncs.buchiIntersect(self.specattr[i],self.potS[i], b_gamma,0)
                 else:
                     # Add buchi to specattr
                     self.specattr.append(b_gamma)
@@ -623,58 +548,61 @@ class formData:
             self.PsiSTL.insert(tk.END, newSTL, 'text')
             self.PsiSTL.configure(state='disabled')
         self.modifyTime = time.time()-currTime
-
+        print('Total time to modify: {}seconds'.format(round(time.time()-currTime,2)))
     def makeForm(self):
         #First make the form and create the few entries that are required for initialization
         master = tk.Tk()
         self.master = master
         master.geometry("750x600")
-        tk.Label(master, text="Number of Robots").grid(row=0,column=0)
-        tk.Label(master, text="Frequency (Hz)").grid(row=1)
-        tk.Label(master, text="Max Velocity (x_i, y_i, theta_i,...)").grid(row=2)
-        tk.Label(master, text="Init state (x_i, y_i, theta_i,...)").grid(row=3)
-        tk.Label(master, text="Init uncontrolled state").grid(row=4)
+
+        tk.Label(master, text="Size of Robot State").grid(row=0)
+        e1 = tk.ttk.Entry(master,width=3)
+        e1.grid(row=0, column=1, columnspan=2,sticky=tk.W)
+        e1.insert(10, self.sizeState)
+
+        tk.Label(master, text="Robot Initial state").grid(row=1)
+        e2 = tk.ttk.Entry(master,width=30)
+        e2.grid(row=1, column=1, columnspan=2,sticky=tk.W)
+        e2.insert(10, self.initialState)
+
+        tk.Label(master, text="Size of Control Input").grid(row=2)
+        e3 = tk.ttk.Entry(master,width=3)
+        e3.grid(row=2, column=1, columnspan=2,sticky=tk.W)
+        e3.insert(10, self.sizeU)
+
+        tk.Label(master, text="Max Control Input").grid(row=3)
+        e4 = tk.ttk.Entry(master,width=30)
+        e4.grid(row=3, column=1, columnspan=2,sticky=tk.W)
+        e4.insert(10, self.maxV)
+
+        tk.Label(master, text="Initial Uncontrolled Object State").grid(row=4)
+        e5 = tk.ttk.Entry(master,width=30)
+        e5.grid(row=4, column=1, columnspan=2,sticky=tk.W)
+        e5.insert(10, self.initialStateRef)
+
         tk.Label(master, text="Upload Event-based STL Specification").grid(row=5)
         tk.Label(master, text="Bypass Buchi Generation?").grid(row=6)
+        self.CheckVar = tk.IntVar(value=self.bypassbuchi)
+        tk.Checkbutton(master, text='Bypass?', highlightbackground='orange', command=self.enableBypass,
+                       variable=self.CheckVar).grid(row=6,column=1,sticky=tk.W,pady=4)
         tk.Label(master, text="Directly Upload Buchi").grid(row=7)
-        tk.ttk.Separator(master, orient='horizontal').grid(column=0, row=8, columnspan=3, sticky='ew')
-
         tk.Label(master, text="OPTIONAL").grid(row=8)
         tk.Label(master, text="Upload Map").grid(row=9)
         tk.Label(master, text="Upload roadmap").grid(row=10)
         tk.Label(master, text="Upload node graph").grid(row=11)
         tk.Label(master, text="Upload map paths").grid(row=12)
+
+        uploadRow = [5,7,9,10,11,12]
+        for i in range(np.size(uploadRow)):
+            infoToPass = [master, uploadRow[i]]
+            tk.Button(master, text='Upload',
+                      command=(lambda e=infoToPass: self.upload(e))).grid(row=uploadRow[i],column=1, sticky=tk.W, pady=4)
+            tk.Label(master, text=os.path.split(self.filenames[i])[-1]).grid(row=uploadRow[i], column =2, sticky=tk.W)
+
+        tk.ttk.Separator(master, orient='horizontal').grid(column=0, row=8, columnspan=3, sticky='ew')
         tk.ttk.Separator(master, orient='horizontal').grid(column=0, row=13, columnspan=3, sticky='new')
         style = tk.ttk.Style()
         style.configure("TEntry", background='white')
-        e1 = tk.ttk.Entry(master,width=5)
-        e2 = tk.ttk.Entry(master,width=5)
-        e3 = tk.ttk.Entry(master,width=30)
-        e4 = tk.ttk.Entry(master,width=30)
-        e5 = tk.ttk.Entry(master,width=30)
-        # I configure it orange because there are display issues on a mac
-        # e1.config(bg="orange")
-        # e2.config(bg="orange")
-        # e3.config(bg="orange")
-        # e4.config(bg="orange")
-        # e5.config(bg="orange")
-        # e6.config(bg="orange")
-        # e7.config(bg="orange")
-        # e8.config(bg="orange")
-        # e9.config(bg="orange")
-        e1.grid(row=0, column=1, columnspan=2,sticky=tk.W)
-        e2.grid(row=1, column=1, columnspan=2,sticky=tk.W)
-        e3.grid(row=2, column=1, columnspan=2,sticky=tk.W)
-        e4.grid(row=3, column=1, columnspan=2,sticky=tk.W)
-        e5.grid(row=4, column=1, columnspan=2,sticky=tk.W)
-        # Place default values. This is useful for quick entering
-        e1.insert(10, self.default[0])
-        e2.insert(10, self.default[1])
-        e3.insert(10, self.default[2])
-        e4.insert(10, self.default[3])
-        e5.insert(10, self.default[4])
-
-
 
         #create status window to show updates during compilation
         text1 = tk.Text(master, height=15, width=75)
@@ -688,52 +616,11 @@ class formData:
         text1.insert(tk.END, '\nWaiting for parameters...', 'text')
         text1.configure(state='disabled')
 
-        #Create buttons and start filling out form
-        tk.Button(master, text='Upload',
-                  command=(lambda e=master: self.upload1(e))).grid(row=5,column=1, sticky=tk.W, pady=4)
-        tk.Label(master, text=os.path.split(self.filename1)[-1]).grid(row=5, column =2, sticky=tk.W)
-
-        tk.Button(master, text='Upload',
-                  command=(lambda e=master: self.upload2(e))).grid(row=7,column=1, sticky=tk.W,pady=4)
-        tk.Label(master, text=os.path.split(self.filename2)[-1]).grid(row=7, column=2, sticky=tk.W)
-
-        tk.Button(master, text='Upload',
-                  command=(lambda e=master: self.upload3(e))).grid(row=9,column=1, sticky=tk.W,pady=4)
-        tk.Label(master, text=os.path.split(self.filename3)[-1]).grid(row=9, column=2, sticky=tk.W)
-
-        tk.Button(master, text='Upload',
-                  command=(lambda e=master: self.upload4(e))).grid(row=10,column=1, sticky=tk.W,pady=4)
-        tk.Label(master, text=os.path.split(self.filename4)[-1]).grid(row=10, column=2, sticky=tk.W)
-
-        tk.Button(master, text='Upload',
-                  command=(lambda e=master: self.upload5(e))).grid(row=11,column=1, sticky=tk.W,pady=4)
-        tk.Label(master, text=os.path.split(self.filename5)[-1]).grid(row=11, column=2, sticky=tk.W)
-
-        tk.Button(master, text='Upload',
-                  command=(lambda e=master: self.upload6(e))).grid(row=12,column=1, sticky=tk.W,pady=4)
-        tk.Label(master, text=os.path.split(self.filename6)[-1]).grid(row=12, column=2, sticky=tk.W)
-
-        self.CheckVar = tk.IntVar(value=self.bypassbuchi)
-        tk.Checkbutton(master, text='Bypass?', highlightbackground='orange', command=self.enableBypass,
-                       variable=self.CheckVar).grid(row=6,column=1,sticky=tk.W,pady=4)
-
         tk.Button(master, text='Quit', highlightbackground='orange', command=master.destroy).grid(row=14,
                                             column=0,sticky=tk.W,pady=4)
         results = np.array([e1, e2, e3,e4,e5,text1,master])
-
         tk.Button(master, text='Apply',
                   command=(lambda e=results: self.userData(e))).grid(row=14, column=1, sticky=tk.W, pady=6)
-
-    def find_accepting_states(self,dot_str):
-        '''
-        to be an accepting state: 'peripheries=2' and there exists transition state -> state
-        '''
-        states = []
-        for line in dot_str.split('\n'):
-            if line.find('peripheries=2') != -1:
-                s = line.split()[0]
-                states.append(s)
-        return states
 
     def find_parens(self,s):
         toret = {}
@@ -757,9 +644,8 @@ class formData:
         self.running = False
         self.master.destroy()
 
-if __name__ == "__main__":
-    realRobots = 0
-    logData = 0
+
+def initializeRobot(realRobots):
     if realRobots:
         import stretch_body.robot
         robot = stretch_body.robot.Robot()
@@ -769,12 +655,30 @@ if __name__ == "__main__":
         robot.lift.move_to(1)
         robot.arm.move_to(0)
         robot.push_command()
-
     else:
         robot = None
 
+    return robot
+
+def stopRobot(robot):
+    robot.base.set_velocity(v_m=0, w_r=0)
+    robot.arm.set_velocity(v_m=0)
+    robot.lift.set_velocity(v_m=0)
+    robot.push_command()
+    robot.end_of_arm.move_to('stretch_gripper', 25)
+
+    time.sleep(2)
+    robot.base.set_velocity(v_m=0, w_r=0)
+    robot.push_command()
+
+if __name__ == "__main__":
+    realRobots = 0 # Use simulation mode if True
+    logData = 0 # log data if True
+
+    robot = initializeRobot(realRobots)
+
     try:
-        f = formData(robot,logData)
+        f = runSpec(robot,logData)
         f.makeForm()
         tk.mainloop()
     except:
@@ -783,15 +687,7 @@ if __name__ == "__main__":
         # Stop the robot
         if realRobots:
             print('Stopping robot')
-            robot.base.set_velocity(v_m=0, w_r=0)
-            robot.arm.set_velocity(v_m=0)
-            robot.lift.set_velocity(v_m=0)
-            robot.push_command()
-            robot.end_of_arm.move_to('stretch_gripper', 25)
-
-            time.sleep(2)
-            robot.base.set_velocity(v_m=0, w_r=0)
-            robot.push_command()
+            stopRobot(robot)
             print('robot stopped!')
         if f.logData:
             print('logging data')

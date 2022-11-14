@@ -4,107 +4,242 @@ import matrixDijkstra
 import re
 import networkx as nx
 from itertools import islice
+import time
+import spot
+import itertools
+
 
 class StatesOfI:
-    def __init__(self):
-        self.cond = [] # Conditions in a transition
-        self.result = [] # result of transitions
-        self.condCNF = [] # Simplified conditions
+    def __init__(self,cond=None,result=None,condCNF=None):
+        if cond is None:
+            self.cond = []
+            self.result = []
+            self.condCNF = []
+        else:
+            self.cond = cond # Conditions in a transition
+            self.result = result # result of transitions
+            self.condCNF = condCNF # Simplified conditions
 
-def buchiIntersect(buchi1, s01, buchi2, s02):
-    # specattr = copy.deepcopy(buchi1)
-    # specattr2 = copy.deepcopy(buchi2)
-    specattr = buchi1
-    specattr2 = buchi2
+    def __eq__(self, other):
+        if (isinstance(other, StatesOfI)):
+            return self.cond == other.cond and self.result == other.result and self.condCNF == other.condCNF
+        return false
+
+def buchiIntersect(originalBuchi, s01, newBuchi, s02):
+    forLoopMethod = 0
+    if forLoopMethod:
+        t1 = time.time()
+        specattr = originalBuchi
+        specattr2 = newBuchi
+        states = [(s01, s02, 0)]
+        accepting1 = originalBuchi.acceptingWithCycle
+        # accepting1 = originalBuchi.accepting_states
+        buchi1 = originalBuchi.buchiStates
+        accepting2 = newBuchi.acceptingWithCycle
+        # accepting2 = newBuchi.accepting_states
+        accepting3 = []
+        buchi2 = newBuchi.buchiStates
+        buchi3Start = []
+        buchi3Result = []
+        buchi3 = []
+        new_list = []
+        stateRef = [(0,0,0)]
+        while len(states) != 0:
+            t2 = time.time()
+            for s in states:
+                buchi3.append(StatesOfI())
+                sOf1, sOf2, accPrev = s
+                conditions1 = []
+                conditions2 = []
+                #Loop through all neighbors (results) of sOf1 in buchi1
+                for i in range(np.size(buchi1[sOf1].result)):
+                    for j in range(np.size(buchi2[sOf2].result)):
+                        n1 = buchi1[sOf1].result[i]
+                        n2 = buchi2[sOf2].result[j]
+
+                        # formulas do not conflict so update acc
+                        if n1 in accepting1 and accPrev == 0:
+                            acc = 1
+                        # elif n2 in accepting2 and n1 in accepting1 and accPrev == 1:
+                        elif n2 in accepting2 and accPrev == 1:
+                            acc = 2
+                        # elif accPrev == 2 and not (n1 == sOf1 and n2 == sOf2):
+                        elif accPrev == 2:
+                            acc = 0
+                        else:
+                            acc = accPrev
+
+                        if (n1,n2,acc) not in buchi3Result and (n1,n2,acc) not in buchi3Start:
+                            new_list.append((n1,n2,acc))
+                            stateRef.append((n1,n2,acc))
+                        if acc == 2:
+                            accepting3.append(stateRef.index((n1,n2,acc)))
+                        buchi3Result.append((n1,n2,acc))
+                        buchi3Start.append((sOf1,sOf2,accPrev))
+                        buchi3[-1].condCNF.append(([[]], [[]]))
+                        buchi3[-1].result.append(stateRef.index((n1,n2,acc)))
+                        conditions1.append(buchi1[sOf1].cond[i])
+                        conditions2.append(buchi2[sOf2].cond[j])
+
+                buchi3[-1].cond = (conditions1,conditions2)
+            print('loop time for {}: {}'.format(len(states),time.time()-t2))
+            states = new_list
+            new_list = []
+
+        print(time.time()-t1)
+        buchiRef = copy.deepcopy(buchi3)
+        resultRef = copy.deepcopy(buchi3Result)
+        acceptRef = copy.deepcopy(accepting3)
+
+    t1 = time.time()
+    specattr = originalBuchi
+    specattr2 = newBuchi
     states = [(s01, s02, 0)]
-    print('calculating accepting states')
-    accepting1 = buchi1.acceptingWithCycle
-    buchi1 = buchi1.buchiStates
-    accepting2 = buchi2.acceptingWithCycle
-    print('found accepting states')
+    accepting1 = originalBuchi.acceptingWithCycle
+    # accepting1 = originalBuchi.accepting_states
+    buchi1 = originalBuchi.buchiStates
+    accepting2 = newBuchi.acceptingWithCycle
+    # accepting2 = newBuchi.accepting_states
     accepting3 = []
-    buchi2 = buchi2.buchiStates
+    buchi2 = newBuchi.buchiStates
     buchi3Start = []
     buchi3Result = []
-    buchi3Edges = []
     buchi3 = []
-    state_update = []
-    count = 0
+    graphRef = []
     new_list = []
     stateRef = [(0,0,0)]
     while len(states) != 0:
-        print(len(states), len(stateRef))
-        for s in states:
-            buchi3.append(StatesOfI())
-            sOf1, sOf2, accPrev = s
-            # if sOf1 == 0 and sOf2 == 0 and accPrev == 2:
-            #     print('here')
-            #Loop through all neighbors (results) of sOf1 in buchi1
-            for i in range(np.size(buchi1[sOf1].result)):
-                for j in range(np.size(buchi2[sOf2].result)):
-                    n1 = buchi1[sOf1].result[i]
-                    n2 = buchi2[sOf2].result[j]
-                    try:
-                        formula1 = buchi1[sOf1].condCNF[n1]
-                        formula2 = buchi2[sOf2].condCNF[n2]
-                    except:
-                        continue
-                    formula1Word = buchi1[sOf1].cond[n1]
-                    formula2Word = buchi2[sOf2].cond[n2]
-                    newFormula = []
-                    #build new formula
-                    for k in range(len(formula1)):
-                        for l in range(len(formula2)):
-                            newFormula.append(formula1[k] + formula2[l])
-                    # formulas do not conflict so update acc
-                    if n1 in accepting1 and accPrev == 0:
-                        acc = 1
-                    # elif n2 in accepting2 and n1 in accepting1 and accPrev == 1:
-                    elif n2 in accepting2 and accPrev == 1:
-                        acc = 2
-                    # elif accPrev == 2 and not (n1 == sOf1 and n2 == sOf2):
-                    elif accPrev == 2:
-                        acc = 0
-                    else:
-                        acc = accPrev
+        n1Vec = [buchi1[s[0]].result for s in states]
+        n2Vec = [buchi2[s[1]].result for s in states]
+        sOf1Vec = [[s[0]]*len(n1Vec[0]) for s in states]
+        sOf2Vec = [[s[1]]*len(n1Vec[0]) for s in states]
+        accPrevVec = [s[2] for s in states]
 
-                    if (n1,n2,acc) not in buchi3Result and (n1,n2,acc) not in buchi3Start:
-                        new_list.append((n1,n2,acc))
-                        stateRef.append((n1,n2,acc))
-                    if acc == 2:
-                        accepting3.append(stateRef.index((n1,n2,acc)))
-                    buchi3Result.append((n1,n2,acc))
-                    # buchi3Edges.append(newFormula)
-                    buchi3Start.append((sOf1,sOf2,accPrev))
-                    buchi3[-1].condCNF.append(newFormula)
-                    buchi3[-1].result.append(stateRef.index((n1,n2,acc)))
-                    buchi3[-1].cond.append('(('+formula1Word + ') and (' + formula2Word + '))')
-        # states = copy.deepcopy(new_list)
+        if len(n2Vec[0]) > 1:
+            print('need to correct for larger 2nd buchi')
+        vec = np.zeros((8*len(n1Vec),np.size(n1Vec,1)*np.size(n2Vec,1)))
+
+        # result1, result2, accPrev, in accepting1, in accepting2, acc
+
+        vec[0::8,:] = np.array(n1Vec)
+        vec[1::8,:] = np.array(n2Vec)
+        vec[2::8,:] = np.outer(np.array(accPrevVec), np.ones(np.size(n1Vec,1)*np.size(n2Vec,1)))
+
+        indT = (np.in1d(vec[0::8, :], np.array(accepting1)) * 1).nonzero()[0]
+        tempVec = vec[3::8,:].reshape(np.size(vec[0::8,:]))
+        tempVec[indT] = 1
+        vec[3::8,:] = tempVec.reshape(len(states),np.size(vec,1))
+
+        indT2 = (np.in1d(vec[1::8, :], np.array(accepting2)) * 1).nonzero()[0]
+        tempVec = vec[4::8,:].reshape(np.size(vec[0::8,:]))
+        tempVec[indT2] = 1
+        vec[4::8, :] = tempVec.reshape(len(states), np.size(vec, 1))
+
+        vec[5::8,:] = vec[2::8,:]
+
+        tempVec = vec[5::8,:].reshape(np.size(vec[0::8,:]))
+        cond1T = np.where(((vec[3::8,:].reshape(np.size(vec[0::8,:])) == 1)*1) + ((vec[2::8,:].reshape(np.size(vec[0::8,:])) == 0) * 1) == 2)[0]
+        tempVec[cond1T] = 1
+        vec[5::8,:] = tempVec.reshape(len(states), np.size(vec, 1))
+
+        tempVec = vec[5::8,:].reshape(np.size(vec[0::8,:]))
+        cond2T = np.where((((vec[4::8,:].reshape(np.size(vec[0::8,:])) == 1)*1) + ((vec[2::8,:].reshape(np.size(vec[0::8,:])) == 1) * 1)) ==2)[0]
+        cond2FinalT = np.setdiff1d(cond2T,cond1T)
+        tempVec[cond2FinalT] = 2
+        vec[5::8,:] = tempVec.reshape(len(states), np.size(vec, 1))
+
+        tempVec = vec[5::8,:].reshape(np.size(vec[0::8,:]))
+        cond3T = np.where(vec[2::8,:].reshape(np.size(vec[0::8,:]))==2)[0]
+        cond12T = np.hstack((cond1T, cond2T))
+        cond3FinalT = np.setdiff1d(cond3T,cond12T)
+        tempVec[cond3FinalT] = 0
+        vec[5::8,:] = tempVec.reshape(len(states), np.size(vec, 1))
+
+        vec[6::8,:] = sOf1Vec
+        vec[7::8,:] = sOf2Vec
+
+        # flatVec = vec.reshape(8,np.size(vec,1)*len(states))
+        s0 = vec[0::8,:].flatten()
+        s1 = vec[1::8,:].flatten()
+        s2 = vec[2::8,:].flatten()
+        s5 = vec[5::8,:].flatten()
+        s6 = vec[6::8,:].flatten()
+        s7 = vec[7::8,:].flatten()
+        stateVec = np.vstack((s0,s1,s5)).T
+        # stateVec = flatVec[[0,1,5],:].T
+        stateTuple = np.array([tuple(e) for e in stateVec],dtype="i,i,i")
+        # startVec = vec[[6,7,2],:].T
+        startVec = np.vstack((s6,s7,s2)).T
+        startTuple = np.array([tuple(e) for e in startVec],dtype="i,i,i")
+
+        stateTupleU = np.unique(stateTuple)
+        startTupleU = np.unique(startTuple)
+        resultArray = np.array(buchi3Result,dtype='i,i,i')
+        startArray = np.array(buchi3Start,dtype='i,i,i')
+
+        _,notAppend1,_ = np.intersect1d(stateTupleU,resultArray, return_indices=True)
+        _,notAppend2,_ = np.intersect1d(stateTupleU,startArray, return_indices=True)
+        notAppendTotal = list(set(list(notAppend1) + list(notAppend2)))
+
+        # print(time.time()-tTest)
+
+        statesToApp = np.delete(stateTupleU,notAppendTotal)
+        new_list += list(statesToApp)
+        stateRef += list(statesToApp)
+
+        # newAccept = list(stateVec[np.where(stateVec[:,2]==2)[0]])
+        # if newAccept != []:
+        #     accepting3 += newAccept
+
+        buchi3Result += list(map(tuple,stateTupleU))
+        buchi3Start += list(map(tuple,startTupleU))
+        buchi3Result = list(set(buchi3Result))
+        buchi3Start = list(set(buchi3Start))
+
+        condCNF = [([[]], [[]])] *  np.size(n1Vec,1)
+        sRef = np.array(stateRef,dtype='i,i,i')
+        refSorted = np.argsort(sRef)
+        stateSearch = np.searchsorted(sRef[refSorted], stateTuple)
+        allResult = refSorted[stateSearch]
+        allResult = allResult.reshape(len(states),np.size(n1Vec,1))
+        allResult = allResult.tolist()
+
+        for i in range(len(states)):
+            result = allResult[i]
+            conditions1 = buchi1[sOf1Vec[i][0]].cond[:]*np.size(n2Vec[0])
+            conditions2 = list(np.repeat(buchi2[sOf2Vec[i][0]].cond[:],np.size(n1Vec[0])))
+            buchi3.append(StatesOfI((conditions1,conditions2),result,condCNF))
+            graphRef += np.vstack(([len(buchi3)-1] * len(result), result)).T.tolist()
+
         states = new_list
         new_list = []
-    print('done')
-    accepting_states = np.unique(accepting3)
+
+    # print(time.time()-t1)
+
+    acceptingArray = np.array(list(map(tuple,stateRef)))
+    accepting_states = list(np.where(acceptingArray[:,2] == 2)[0])
     graph = np.zeros((np.size(buchi3), np.size(buchi3)))
-    for i in range(np.size(buchi3)):
-        for j in range(np.size(buchi3[i].result)):
-            graph[i, int(buchi3[i].result[j])] = 1
-    print('finding accepting states')
-    # Find accepting states with a cycle
-    acceptingWithCycle = []
-    for j in range(len(accepting_states)):
-        if graph[accepting_states[j], accepting_states[j]] != 1:
-            (cost, rute) = matrixDijkstra.dijkstra(graph, accepting_states[j], accepting_states[j])
-        else:
-            cost = 1
-            rute = np.array([accepting_states[j], accepting_states[j]])
-        costRef = np.size(rute, 0) - 1
-        if not cost > 10000 or costRef == cost:
-            acceptingWithCycle.append(accepting_states[j])
+
+    G = nx.DiGraph()
+    G.add_nodes_from(range(0, np.size(graph, 0)))
+    G.add_edges_from(graphRef)
+    graphRefArray = np.array(graphRef)
+    graph[graphRefArray[:, 0], graphRefArray[:, 1]] = 1
+    # for i in range(np.size(buchi3)):
+    #     for j in range(np.size(buchi3[i].result)):
+    #         graph[i, int(buchi3[i].result[j])] = 1
+    #         G.add_edge(i, int(buchi3[i].result[j]))
 
     #formatt everything correctly
     specattr.Pi_mu += specattr2.Pi_mu
-    specattr.acceptingWithCycle = acceptingWithCycle
+    specattr.acceptingWithCycle = accepting_states
     specattr.accepting_states = accepting_states
+    # if specattr2.acceptableLoop[0,0] is not None:
+    totalN = specattr.N + specattr2.N
+    acceptableLoop = np.array(list(itertools.product([0, 1], repeat=totalN)))
+    sizeCombo = np.size(acceptableLoop,0)
+    specattr.acceptableLoop = np.hstack((acceptableLoop,np.atleast_2d(np.full(sizeCombo,None)).T))
+
     specattr.buchi = []
     specattr.buchiStates = buchi3
     specattr.controllableProp += specattr2.controllableProp
@@ -120,46 +255,21 @@ def buchiIntersect(buchi1, s01, buchi2, s02):
             specattr.controllablePropOrder.append(j)
     specattr.evProps.__dict__.update(specattr2.evProps.__dict__)
     specattr.graph = graph
+    specattr.G = G
     specattr.inpRef += specattr2.inpRef
-    # specattr.inpRef = [list(x) for x in set(tuple(x) for x in specattr.inpRef)]
     specattr.inpLabels += specattr2.inpLabels
-    # specattr.inpLabels = [list(x) for x in set(tuple(x) for x in specattr.inpLabels)]
     specattr.input = np.hstack((specattr.input, specattr2.input))
-    specattr.inputVal = np.hstack((specattr.inputVal, specattr2.inputVal))
     specattr.propositions += specattr2.propositions
     specattr.uncontrollableProp += specattr2.uncontrollableProp
     specattr.locOfUncontrollable = [list(specattr.propositions).index(s) for s in list(specattr.uncontrollableProp)]
     specattr.locOfControllable = np.asarray([list(specattr.propositions).index(s) for s in list(specattr.controllableProp)])
     specattr.N = np.size(specattr.uncontrollableProp)
-    specattr.nRoutes = [[]] * len(specattr.graph)
-    print('finding routes')
-    # for i in range(np.size(specattr.graph, 0)):
-    #     tempRoute = []
-    #     for j in range(np.size(specattr.acceptingWithCycle, 0)):
-    #         goTo = specattr.acceptingWithCycle[j]
-    #         try:
-    #             allPaths = findNRoutes(specattr.graph, i, goTo)
-    #             shortestLength = len(min(allPaths, key=len))
-    #             allPaths = [path for path in allPaths if len(path) == shortestLength]
-    #
-    #             #double check first transition
-    #             if int(specattr.graph[allPaths[0][0],allPaths[0][1]]):
-    #                 tempRoute.append(allPaths)
-    #             else:
-    #                 if int(specattr.graph[allPaths[0][-1],allPaths[0][-2]]):
-    #                     allPaths[0].reverse()
-    #                     tempRoute.append(allPaths)
-    #                 else:
-    #                     tempRoute.append([])
-    #         except:
-    #             pass
-    #     specattr.nRoutes[i] = tempRoute
-    specattr.nRoutes = []
+    specattr.nRoutes = np.full((len(specattr.graph),len(specattr.graph)), None)
     specattr.parameters += specattr2.parameters
     specattr.props.__dict__.update(specattr2.props.__dict__)    # specattr.uncontrollableProp =
-    specattr.wall += specattr2.wall
-
-    return specattr
+    currState = stateRef.index((s01,s02,0))
+    # print(time.time()-t1)
+    return specattr, currState
 
 def findNRoutes(graph,startState, endState):
     numP = 5
