@@ -107,8 +107,13 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU,sizeState):
         # if nominal > np.pi:
         #     nominal = x[indOfI] - eval(str(pi_mu.point[0]))
 
-        if nominal > maxV[indOfI-1]:
-            nominal = maxV[indOfI-1]
+        if sizeState == sizeU:
+            offset = 0
+        else:
+            offset = 1
+
+        if nominal > maxV[indOfI-offset]:
+            nominal = maxV[indOfI-offset]
         if sizeU != sizeState:
             nom[0,indOfI-1] = nominal
         else:

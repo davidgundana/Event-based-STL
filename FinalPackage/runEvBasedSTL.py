@@ -38,14 +38,14 @@ class runSpec:
         self.robot = robot
         self.sizeState = 6 # state size of a robot
         self.sizeU = 6 # size of the control input
-        self.sizeU = 5 # size of the control input
+        # self.sizeU = 5 # size of the control input
 
         self.initialState = '6,6,.342,0,0,30' # initial state of the system
         self.maxV = '0.2,0.2,0.2,0.05,0.07,12' #Maximum velocity
-        self.maxV = '0.2,0.2,0.05,0.07,12' #Maximum velocity
+        # self.maxV = '0.2,0.2,0.05,0.1,12' #Maximum velocity
 
         # stretch reference values
-        self.initialStateRef = '0,0,0.025,0,-2,-2,-2,0,0,0,0,0,0,0,0,2.2,2' # Initial state of reference objects
+        self.initialStateRef = '-3,-3,0.025,0,-5,-5,-5,0,0,0,0,0,0,0,0,2.2,2' # Initial state of reference objects
         self.linearControl = 1 # Control affine system (default is True)
         self.running = True # initialize the system to run
         self.logData = logData # Log data flag

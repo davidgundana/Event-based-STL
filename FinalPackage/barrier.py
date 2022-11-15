@@ -1,6 +1,7 @@
 import numpy as np
 import re
 import matrixDijkstra
+import copy
 
 def barrier(pi, x,xR, t, wall, roadmap, preF,linear):
     # Determine whether until, eventually, or always
@@ -37,7 +38,7 @@ def totalBarrier(specattr, ind, indOfActive):
                 if (specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].type == 'ev' and not specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].currentTruth):
                     if specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].bxt_i is not None:
                         if hasattr(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]], 'satisfied'):
-                            if not specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].satsified:
+                            if not specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].satisfied:
                                 bxt_i.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]].bxt_i)
                                 piRobot.append(specattr[indOfActive[i][0]].Pi_mu[indOfActive[i][1]])
                         else:
@@ -61,7 +62,6 @@ def totalBarrier(specattr, ind, indOfActive):
         bxt_i = bxt_iNew
 
     bxt_i = np.unique(bxt_i)
-
     if np.where(bxt_i!=0)[0].size != 0:
         bxt = 0
         for k in range(0, np.size(bxt_i)):
@@ -105,8 +105,8 @@ def partialTotalBarrier(piDis):
 def evBarrier(pi, t, x, xR ,wall,roadmap, preF,linear):
     buffer = 5
     if not linear and len(pi.dir) > 1:
-        x[0] += .02 * np.cos(x[2])
-        x[1] += .02 * np.sin(x[2])
+        x[0] += .1 * np.cos(x[2])
+        x[1] += .1 * np.sin(x[2])
     hxt = eval(pi.hxt)
     if pi.hxte == []:
         pi.hxte = hxt + buffer
@@ -165,6 +165,9 @@ def evBarrier(pi, t, x, xR ,wall,roadmap, preF,linear):
         coeff = np.polyfit(valP, [0, 1, 0], 2)
         bxt_i = (t - b) + coeff[0] * eval(funcOf)**2 + coeff[1] * eval(funcOf) + coeff[2]
 
+    if not linear and len(pi.dir) > 1:
+        x[0] -= .1 * np.cos(x[2])
+        x[1] -= .1 * np.sin(x[2])
 
     pi.bxt_i = bxt_i
 
@@ -194,7 +197,7 @@ def alBarrier(pi, t, x, xR ,wall, roadmap, preF):
                 if valOfFunc > (signF*1+p):
                     bxt_i = None
             else:
-                if valOfFunc > (signF * 12*p):
+                if valOfFunc > (signF * 3*p):
                     bxt_i = None
         if bxt_i is not None:
             bxt_i = 1*bxt_i
@@ -210,21 +213,27 @@ def alBarrier(pi, t, x, xR ,wall, roadmap, preF):
 
 def partials(piRobot, x, xR, t, wall, roadmap, preF,bxtx,linear):
     delt = .01
-    newx = list(x)
+    piRobotRef = copy.deepcopy(piRobot)
+    xRef = copy.deepcopy(x)
+    newx = copy.deepcopy(x)
     bPartialX = []
+    # piRobotRef = copy.deepcopy(piRobot)
     for i in range(0,np.size(x)):
         piDis = []
         newx[i] = newx[i] + delt
         for k in range(np.size(piRobot)):
-            piDis.append(barrier(piRobot[k], newx, xR, t, wall, roadmap, 0,linear))
+            pTemp = barrier(piRobot[k], newx, xR, t, wall, roadmap, 0,linear)
+            piDis.append(pTemp)
         bTemp = partialTotalBarrier(piDis)
         bPartialX.append((bTemp - bxtx)/delt)
-        newx = list(x)
+        piRobot = copy.deepcopy(piRobotRef)
+        newx = copy.deepcopy(xRef)
 
     newt = t
     bPartialT = []
     for i in range(0,np.size(t)):
         newt = newt + delt
+        piDis = []
         for k in range(np.size(piRobot)):
             piDis.append(barrier(piRobot[k], x, xR, newt, wall, roadmap, 0,linear))
         bTemp = partialTotalBarrier(piDis)
