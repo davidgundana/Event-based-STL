@@ -45,7 +45,7 @@ class runSpec:
         # self.maxV = '0.2,0.2,0.05,0.1,12' #Maximum velocity
 
         # stretch reference values
-        self.initialStateRef = '-3,-3,0.025,0,-5,-5,-5,0,0,0,0,0,0,0,0,1.2,1' # Initial state of reference objects
+        self.initialStateRef = '-3,-3,0.025,0,-5,-5,-5,0,0,0,0,0,0,0,0,0,0' # Initial state of reference objects
         self.linearControl = 1 # Control affine system (default is True)
         self.running = True # initialize the system to run
         self.logData = logData # Log data flag
@@ -145,7 +145,7 @@ class runSpec:
             self.position += (self.robot.lift.status['pos'],)
             # print(rotation_quaternion)
             # The rotation is in quaternion. We need to convert it to euler angles
-            newRot = (rotation_quaternion[2],rotation_quaternion[0],rotation_quaternion[1],rotation_quaternion[3])
+            newRot = (rotation_quaternion[0],rotation_quaternion[1],rotation_quaternion[2],rotation_quaternion[3])
             rotx, roty, rotz = quaternion_to_euler(newRot)
             # Store the roll pitch and yaw angles
             self.rotations = (rotx, roty, rotz)
@@ -313,33 +313,32 @@ class runSpec:
                 '''
                 print('--------------------------------------------------------------')
                 if self.robot is not None:
-                    angle = self.transform_to_pipi((np.pi/180)*(self.rotations[2])+ pi/2)[0]
-                    self.x[0]= self.position[2]
-                    self.x[1] = self.position[0]
+                    angle = self.transform_to_pipi((np.pi/180)*(self.rotations[2]))[0]
+                    self.x[0]= self.position[0]
+                    self.x[1] = self.position[1]
                     self.x[2] = angle
+                    # print(self.x[0:3])
                     self.x[3] = self.position[3]
                     self.x[4] = self.position[4]
                     self.x[5] = self.robot.end_of_arm.status['stretch_gripper']['pos_pct']
-                    self.xR[0] = self.objectPosition[2]
-                    self.xR[1] = self.objectPosition[0]
-                    self.xR[2] = self.objectPosition[1] - self.offsetZ[0]
+                    self.xR[0] = self.objectPosition[0]
+                    self.xR[1] = self.objectPosition[1]
+                    self.xR[2] = self.objectPosition[2] - self.offsetZ[0]
                     #depot position
-                    self.xR[5] = self.objectPosition2[2]
-                    self.xR[6] = self.objectPosition2[0]
-                    self.xR[7] = self.objectPosition2[1] - self.offsetZ[1]
-                    self.xR[10] = self.objectPosition3[2]
-                    self.xR[11] = self.objectPosition3[0]
-                    self.xR[12] = self.objectPosition3[1] - self.offsetZ[2]
+                    self.xR[5] = self.objectPosition2[0]
+                    self.xR[6] = self.objectPosition2[1]
+                    self.xR[7] = self.objectPosition2[2] - self.offsetZ[1]
+                    self.xR[10] = self.objectPosition3[0]
+                    self.xR[11] = self.objectPosition3[1]
+                    self.xR[12] = self.objectPosition3[2] - self.offsetZ[2]
 
-                # print(np.sqrt((self.x[0] - self.xR[10]) ** 2 + (self.x[1] - self.xR[11]) ** 2))
-                # print(self.specattr[0].parameters)
                 print('t: {}, X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}'.format(round(self.t,2),round(self.x[0],2),round(self.x[1],2),
-                    round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),round(self.x[5],2)))
+                   round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),round(self.x[5],2)))
                 self.checkInputs()
                 self.updateRef()
                 t1 = time.time()
                 nom, self.specattr,error = control.synthesis(self.specattr, self.potS, self.roadmap, self.x, self.xR, self.t, self.maxV, self.sizeState,self.sizeU, self.preFailure, self.text1, self.master)
-                print('synth Time: ', time.time()-t1)
+                # print('synth Time: ', time.time()-t1)
                 if error and self.robot is not None:
                     self.robot.base.set_velocity(v_m=0, w_r=0)
                     self.robot.arm.set_velocity(v_m=0)
@@ -468,7 +467,7 @@ class runSpec:
         self.xR[13] = np.sqrt((self.x[0]-self.xR[10])**2 + (self.x[1]-self.xR[11])**2) - self.armZero
         self.xR[14] = np.arctan2(self.xR[11]-centroidPoint[1],self.xR[10]-centroidPoint[0]) + np.pi/2
     def modifySpec(self):
-        circle1 = plt.Circle((self.initXRef[15], self.initXRef[16]), 1)
+        circle1 = plt.Circle((self.initXRef[15], self.initXRef[16]), .3)
         self.ax.add_patch(circle1)
         currTime = time.time()
         newSTL = self.PsiSTLnew.get("1.0",tk.END)
@@ -681,7 +680,7 @@ def stopRobot(robot):
     robot.push_command()
 
 if __name__ == "__main__":
-    realRobots = 0 # Use simulation mode if True
+    realRobots = 1 # Use simulation mode if True
     logData = 0 # log data if True
 
     robot = initializeRobot(realRobots)

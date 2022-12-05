@@ -89,7 +89,7 @@ def feedbackLin(vx, vy, theta, epsilon,maxV):
     rot = np.array([[1.0, 0.0], [0.0, 1/epsilon]])
 
     fVelAngVel = np.dot(np.dot(rot, R),dirVelocities).T[0]
-    cmdV,cmdW = limitCMDs(fVelAngVel[0],fVelAngVel[1],maxV,0.2)
+    cmdV,cmdW = limitCMDs(fVelAngVel[0],fVelAngVel[1],maxV,0.16)
 
     return [cmdV,cmdW]
 

@@ -68,13 +68,13 @@ def totalBarrier(specattr, ind, indOfActive):
             try:
                 bxt = bxt + np.exp(-bxt_i[k])
             except:
-                print('here')
+                print('error finding exponential')
         bxt = -np.log(bxt)
     else:
         bxt = 0
 
     if bxt < 0:
-        print('here')
+        print('Barrier less than 0')
     return bxt, piRobot
 
 def partialTotalBarrier(piDis):
@@ -90,6 +90,7 @@ def partialTotalBarrier(piDis):
 
         bxt_i = bxt_iNew
 
+    print(bxt_i)
     bxt_i = np.unique(bxt_i)
 
     if np.where(bxt_i!=0)[0].size != 0:
@@ -122,44 +123,8 @@ def evBarrier(pi, t, x, xR ,wall,roadmap, preF,linear):
             print('here')
         bxt_i = bxt_i - hxt
 
-        # signF = phi.signFS[0]
-        # if numPos >= 2:
-        #     signF = -1 * signF
-        #
-        # # This only occurs once during initialization to evaluate the initial state
-        # initBuffer = 10
-        # if t == Ts:
-        #     if numPos == 1:
-        #         initDist = abs(eval(funcOf) - p)
-        #     else:
-        #         initDist = eval(funcOf)
-        #     bInit = signF * (initDist-p)
-        #     aInit = (signF*p - signF*bInit)/b
-        #     gamInit = (t-(1/hz)-a) * aInit + bInit
-        #     phi.minVel = gamInit/b
-        # else:
-        #     tempFunc = re.sub('pos\[', 'posStart[', funcOf)
-        #     if numPos == 1:
-        #         initDist = abs(eval(tempFunc) - p) + initBuffer
-        #     else:
-        #         initDist = eval(tempFunc) + initBuffer
-        #     bInit = signF * (initDist - p)
-        #     aInit = (signF * p - signF * bInit) / b
-        #     # gamInit = (t - (1 / hz) - a) * aInit + bInit
-        #     gamInit = (t - a) * aInit + bInit
-        #     phi.minVel = gamInit / b
-        #
-        # # Make the initial barrier function safe set larger to account for any disturbances that can occur or
-        # # if the robot needs to go backwards
-        # addBuffer = .5
-        # b1 = signF * (initDist + addBuffer)
-        # a1 = (signF * p - signF * b1) / b
-        # # gam = (t - (1 / hz) - a) * a1 + b1
-        # gam = (t - a) * a1 + b1
-        # bxt_i = gam - signF * eval(funcOf)
-        #
-        # bxt_i = ((t - inputTime - a) * (p-initDist))/(b - a) - (p - initDist) + (p - eval(funcOf))
-
+        if 'x[2]' in pi.hxt:
+            bxt_i = bxt_i * 2
 
     else:
         p = np.asarray([float(p[0]), float(p[-1])])

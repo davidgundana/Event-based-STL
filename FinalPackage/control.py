@@ -60,6 +60,7 @@ def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,tex
             b = alpha * (bxtx) + bPartialT[0]
 
             nominals = getAllNoms(piRobot,maxV, sizeU)
+            print(b, bxtx, bPartialT)
             nom,error = getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU,x,sizeState)
     return nom,specattr, error
 
