@@ -17,11 +17,6 @@ def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,tex
     specattr = trackInputs(specattr, x, xR, t)
 
     # Evaluate the current state of the environment
-    try:
-        if t > specattr[0].Pi_mu[12].a + specattr[0].Pi_mu[12].t_e:
-            print('here')
-    except:
-        pass
     specattr = evalProps(specattr, roadmap, x, xR, t, maxV,sizeU,sizeState)
 
     # Find Propositions to activate based on the current state and transitiosn to an accepting state

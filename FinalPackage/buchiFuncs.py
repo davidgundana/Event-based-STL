@@ -253,7 +253,10 @@ def buchiIntersect(originalBuchi, s01, newBuchi, s02):
                 break
         if isThere:
             specattr.controllablePropOrder.append(j)
-    specattr.evProps.__dict__.update(specattr2.evProps.__dict__)
+    try:
+        specattr.evProps.__dict__.update(specattr2.evProps.__dict__)
+    except:
+        pass
     specattr.graph = graph
     specattr.G = G
     specattr.inpRef += specattr2.inpRef
@@ -267,7 +270,7 @@ def buchiIntersect(originalBuchi, s01, newBuchi, s02):
     specattr.nRoutes = np.full((len(specattr.graph),len(specattr.graph)), None)
     specattr.parameters += specattr2.parameters
     specattr.props.__dict__.update(specattr2.props.__dict__)    # specattr.uncontrollableProp =
-    currState = stateRef.index((s01,s02,0))
+    currState = list(map(tuple,stateRef)).index((s01,s02,0))
     # print(time.time()-t1)
     return specattr, currState
 

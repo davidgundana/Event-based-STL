@@ -40,12 +40,12 @@ class runSpec:
         self.sizeU = 6 # size of the control input
         # self.sizeU = 5 # size of the control input
 
-        self.initialState = '6,6,.342,0,0,30' # initial state of the system
-        self.maxV = '0.2,0.2,0.2,0.05,0.07,12' #Maximum velocity
+        self.initialState = '6,6,3.8,0,0,30' # initial state of the system
+        self.maxV = '0.2,0.2,0.2,0.05,0.07,15' #Maximum velocity
         # self.maxV = '0.2,0.2,0.05,0.1,12' #Maximum velocity
 
         # stretch reference values
-        self.initialStateRef = '-3,-3,0.025,0,-5,-5,-5,0,0,0,0,0,0,0,0,2.2,2' # Initial state of reference objects
+        self.initialStateRef = '-3,-3,0.025,0,-5,-5,-5,0,0,0,0,0,0,0,0,1.2,1' # Initial state of reference objects
         self.linearControl = 1 # Control affine system (default is True)
         self.running = True # initialize the system to run
         self.logData = logData # Log data flag
@@ -276,8 +276,9 @@ class runSpec:
         # plt.ion()
         ax.plot(xwall, ywall, color="black")
         self.objects, = ax.plot(self.initXRef[0], self.initXRef[1],'o', color="blue")
-        circle1 = plt.Circle((self.initXRef[15], self.initXRef[16]), 1)
-        ax.add_patch(circle1)
+        self.ax = ax
+        # circle1 = plt.Circle((self.initXRef[15], self.initXRef[16]), 1)
+        # ax.add_patch(circle1)
         self.x = self.initX
         self.xR = self.initXRef
         self.potS = [0]
@@ -304,9 +305,9 @@ class runSpec:
     def animation_data(self):
         self.t = 0
         time.sleep(1)
+        theTime = time.time()
         while self.running:
             if not self.pause:
-                theTime = time.time()
                 '''
                 This Simulates the process 
                 '''
@@ -362,6 +363,7 @@ class runSpec:
                 End of process
                 '''
                 elapsedT = time.time()-theTime
+                theTime = time.time()
                 self.t += elapsedT
                 formattedTime = "Time: {}s".format(round(self.t,2))
                 self.timeText.set_text(formattedTime)
@@ -391,6 +393,7 @@ class runSpec:
                     else:
                         newPos = helperFuncs.integrateOdom([d,phi],self.x[3*i:3*i+3])
                         self.x[3 * i:3 * i + 3] = newPos
+                        self.x[2] = self.transform_to_pipi(self.x[2])[0]
                         self.x[3*i+3] += vD * loopTime
                         self.x[3*i+4] += vZ * loopTime
                         self.x[3*i+5] += vGrip * loopTime
@@ -465,6 +468,8 @@ class runSpec:
         self.xR[13] = np.sqrt((self.x[0]-self.xR[10])**2 + (self.x[1]-self.xR[11])**2) - self.armZero
         self.xR[14] = np.arctan2(self.xR[11]-centroidPoint[1],self.xR[10]-centroidPoint[0]) + np.pi/2
     def modifySpec(self):
+        circle1 = plt.Circle((self.initXRef[15], self.initXRef[16]), 1)
+        self.ax.add_patch(circle1)
         currTime = time.time()
         newSTL = self.PsiSTLnew.get("1.0",tk.END)
         newSTL = re.sub('\\n','',newSTL)
@@ -512,16 +517,20 @@ class runSpec:
                 for i in range(np.size(inpLabels,0)):
                     if inpLabels[i][0] in newSpec:
                         inpLabelsNew.append(inpLabels[i])
-                b_gamma = prep.getBuchi(Pi_mu, '', '', '', inpRef, inpLabels, evProps, newSpec ,0)
+                b_gamma = prep.getBuchi(Pi_mu, '', '', '', inpRefNew, inpLabelsNew, evProps, newSpec ,0)
                 inpRefAdd = []
                 inpLabelsAdd = []
+                evPropsAdd = []
                 for j in range(np.size(propositions)):
                     if any(substring in inpRef[j][0] for substring in propositions):
                         inpRefAdd.append(inpRef[j])
                     if any(substring in inpLabels[j][0] for substring in propositions):
                         inpLabelsAdd.append(inpRef[j])
+                    # if any(substring in list(evProps.__dict__.keys()) for substring in inpLabels):
+                    #     evPropsAdd.append(evProps[j])
                 b_gamma.inpRef = inpRefAdd
                 b_gamma.inpLabels = inpLabelsAdd
+                b_gamma.evProps = evPropsAdd
                 if gamma == '&':
                     # Generate Buchi Intersect
                     for i in range(np.size(self.specattr)):

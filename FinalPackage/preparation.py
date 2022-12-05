@@ -208,6 +208,8 @@ def getPreds(EvSTL):
             if ('<' in splitSTL[i] and '=' not in splitSTL[i]) or ('>' in splitSTL[i] and '=' not in splitSTL[i]):
                 predToReplace = 'props.pred' + str(predCount)
                 predCount += 1
+                # if 'x[2]' in splitSTL[i]:
+
                 predLabels.append([splitSTL[i], predToReplace])
                 splitSTL[i] = predToReplace
 
