@@ -21,7 +21,7 @@ def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,tex
 
     # Find Propositions to activate based on the current state and transitiosn to an accepting state
     specattr, props2Activate, potS, _,_ = act.activate(specattr,potS,roadmap, 0,[],x, xR,t, maxV, sizeU)
-    print(props2Activate)
+    # print(props2Activate)
 
     if preFailure:
         # this is for a pre-failure warning. We want to see what happens if things change with the inputs
@@ -31,13 +31,16 @@ def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,tex
     # Organize abstracted propositions by the activated propositions
     indOfActive = []
     linear = sizeState == sizeU
+    activatedProps = []
     for i in range(np.size(specattr)):
         for j in range(np.size(specattr[i].Pi_mu)):
             labelOfI = re.split('\.',specattr[i].Pi_mu[j].prop_label)[-1]
             if labelOfI in props2Activate:
                 specattr[i].Pi_mu[j] = barrier.barrier(specattr[i].Pi_mu[j], x, xR, t, specattr[0].wall, roadmap, 0,linear)
                 indOfActive.append([i,j])
+                activatedProps.append(labelOfI)
 
+    print('Activated Props: {}'.format(activatedProps))
     nom = np.zeros((1, sizeU))
     for i in range(1, int(np.size(x)/sizeState) + 1):
         bxtx, piRobot = barrier.totalBarrier(specattr, i, indOfActive)

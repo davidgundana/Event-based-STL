@@ -41,11 +41,11 @@ class runSpec:
         # self.sizeU = 5 # size of the control input
 
         self.initialState = '6,6,3.8,0,0,30' # initial state of the system
-        self.maxV = '0.2,0.2,0.2,0.05,0.07,15' #Maximum velocity
+        self.maxV = '0.2,0.2,0.2,0.1,0.12,15' #Maximum velocity
         # self.maxV = '0.2,0.2,0.05,0.1,12' #Maximum velocity
 
         # stretch reference values
-        self.initialStateRef = '-3,-3,0.025,0,-5,-5,-5,0,0,0,0,0,0,0,0,0,0' # Initial state of reference objects
+        self.initialStateRef = '-3,-3,0.025,0,-5,-5,-5,0,0,0,0,0,0,0,0,0,0,0,0,0,0' # Initial state of reference objects
         self.linearControl = 1 # Control affine system (default is True)
         self.running = True # initialize the system to run
         self.logData = logData # Log data flag
@@ -55,9 +55,9 @@ class runSpec:
 
         # Stretch Robot Parameters
         self.wheel2Center =.4
-        self.offsetX = -.05
-        self.armZero = .19
-        self.offsetZ = [0.08, -.15, .05]
+        self.offsetX = .075
+        self.armZero = .32
+        self.offsetZ = [0, -.15, -.55]
 
         # Default spec location
         mainDirectory = os.path.dirname(os.path.abspath(__file__))
@@ -155,6 +155,10 @@ class runSpec:
             self.objectPosition2 = position
         if id == 33 and position != []:
             self.objectPosition3 = position
+        if id == 34 and position != []:
+            self.objectPosition4 = position
+        if id == 35 and position != []:
+            self.objectPosition5 = position
 
     def transform_to_pipi(self,input_angle):
         revolutions = int((input_angle + np.sign(input_angle) * pi) / (2 * pi))
@@ -227,7 +231,7 @@ class runSpec:
         self.PsiSTL.configure(state='disabled')
 
         tk.Label(self.master, text="Ψ-new:").grid(row=20,column=4, padx=10, pady=25)
-        self.PsiSTLnew = tk.Text(self.master,width=60, height=2,font=20)
+        self.PsiSTLnew = tk.Text(self.master,width=60, height=6,font=20)
         self.PsiSTLnew.grid(row=20, column=5, columnspan=4,sticky=tk.W)
         self.PsiSTLnew.insert(tk.END,self.psinew)
         butt = tk.ttk.Button(self.master, text='Modify', command=self.modifySpec)
@@ -331,6 +335,10 @@ class runSpec:
                     self.xR[10] = self.objectPosition3[0]
                     self.xR[11] = self.objectPosition3[1]
                     self.xR[12] = self.objectPosition3[2] - self.offsetZ[2]
+                    self.xR[15] = self.objectPosition4[0]
+                    self.xR[16] = self.objectPosition4[1]
+                    self.xR[17] = self.objectPosition5[0]
+                    self.xR[18] = self.objectPosition5[1]
 
                 print('t: {}, X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}'.format(round(self.t,2),round(self.x[0],2),round(self.x[1],2),
                    round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),round(self.x[5],2)))

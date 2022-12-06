@@ -75,22 +75,23 @@ def totalBarrier(specattr, ind, indOfActive):
 
     if bxt < 0:
         print('Barrier less than 0')
+        print(bxt_i,bxt)
     return bxt, piRobot
 
 def partialTotalBarrier(piDis):
     bxt_i = []
     for i in range(np.size(piDis,0)):
-        bxt_i.append(piDis[i].bxt_i)
+        if piDis[i].bxt_i is not None:
+            bxt_i.append(piDis[i].bxt_i)
 
     bxt_iNew = []
     if np.size(bxt_i) > 1 and np.where(np.array(bxt_i)==0)[0].size != 0:
         for k in range(0, np.size(bxt_i)):
-            if bxt_i[k] != 0:
+            if bxt_i[k] != 0 and bxt_i[k] is not None:
                 bxt_iNew.append(bxt_i[k])
 
         bxt_i = bxt_iNew
 
-    print(bxt_i)
     bxt_i = np.unique(bxt_i)
 
     if np.where(bxt_i!=0)[0].size != 0:
@@ -148,35 +149,29 @@ def alBarrier(pi, t, x, xR ,wall, roadmap, preF):
         wallTemp = lineseg_dists(tempPos, roadmap.map[:,0:2], roadmap.map[:,2:])
         wall[2*(pi.robotsInvolved[0]-1):2 * (pi.robotsInvolved[0] - 1) + 2] = wallTemp
     # if theres only one bound for the safe-set
-    if np.size(np.where(pi.signFS[0] != 0)) == 1:
-        signF = pi.signFS[0]
-        # compute the barrier function
-        valOfFunc = eval(pi.hxt)
-        bxt_i = 1 * signF * (-p + eval(pi.hxt))
-        # bxt_i = 1 * signF * (-p + eval(pi.hxt))**5
+    signF = pi.signFS[0]
+    # compute the barrier function
+    valOfFunc = eval(pi.hxt)
+    bxt_i = 1 * signF * (-p + eval(pi.hxt))
+    bxt_i = 1 * signF * (-p + eval(pi.hxt))**3
 
-        # This is optional. For speed, if the robot is "far enough" from violation, we will ignore this. Can
-        # be commented out
-        if signF == -1:
-            if valOfFunc < (signF*.7+p):
+    # This is optional. For speed, if the robot is "far enough" from violation, we will ignore this. Can
+    # be commented out
+    if signF == -1:
+        if valOfFunc < (signF*.7+p):
+            bxt_i = None
+    else:
+        if p >= 1:
+            if valOfFunc > (signF*1+p):
                 bxt_i = None
         else:
-            if p >= 1:
-                if valOfFunc > (signF*1+p):
-                    bxt_i = None
-            else:
-                if valOfFunc > (signF * 3*p):
-                    bxt_i = None
-        if bxt_i is not None:
-            bxt_i = 1*bxt_i
-        pi.bxt_i = bxt_i
-    else:
-        valP = [1.4 * p[0], (p[0] + p[1]) / 2, .6 * p[1]]
-        coeff = np.polyfit(valP,[0,1,0],2)
-        bxt_i = coeff[0]*eval(funcOf)**2 + coeff[1]*eval(funcOf) + coeff[2]
-#    if bxt_i is not None:
-#        if bxt_i <= .2:
-#            print('here')
+            if valOfFunc > (signF * 3*p):
+                bxt_i = None
+    if bxt_i is not None:
+        bxt_i = 1*bxt_i
+    pi.bxt_i = bxt_i
+
+
     return pi
 
 def partials(piRobot, x, xR, t, wall, roadmap, preF,bxtx,linear):
@@ -203,7 +198,7 @@ def partials(piRobot, x, xR, t, wall, roadmap, preF,bxtx,linear):
         newt = newt + delt
         piDis = []
         for k in range(np.size(piRobot)):
-            piDis.append(barrier(piRobot[k], x, xR, newt, wall, roadmap, 0,linear))
+            piDis.append(barrier(piRobot[k], newx, xR, newt, wall, roadmap, 0,linear))
         bTemp = partialTotalBarrier(piDis)
         bPartialT.append((bTemp - bxtx)/delt)
         newt = t
