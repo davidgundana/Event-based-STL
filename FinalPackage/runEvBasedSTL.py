@@ -528,9 +528,10 @@ class runSpec:
                 inpRefAdd = []
                 inpLabelsAdd = []
                 evPropsAdd = []
-                for j in range(np.size(propositions)):
+                for j in range(len(inpRef)):
                     if any(substring in inpRef[j][0] for substring in propositions):
                         inpRefAdd.append(inpRef[j])
+                for j in range(len(inpLabels)):
                     if any(substring in inpLabels[j][0] for substring in propositions):
                         inpLabelsAdd.append(inpRef[j])
                     # if any(substring in list(evProps.__dict__.keys()) for substring in inpLabels):
@@ -688,7 +689,7 @@ def stopRobot(robot):
     robot.push_command()
 
 if __name__ == "__main__":
-    realRobots = 1 # Use simulation mode if True
+    realRobots = 0 # Use simulation mode if True
     logData = 0 # log data if True
 
     robot = initializeRobot(realRobots)
