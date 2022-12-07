@@ -55,14 +55,14 @@ class runSpec:
 
         # Stretch Robot Parameters
         self.wheel2Center =.4
-        self.offsetX = .075
+        self.offsetX = .06
         self.armZero = .32
-        self.offsetZ = [0, -.15, -.55]
+        self.offsetZ = [0, -.15, 0]
 
         # Default spec location
         mainDirectory = os.path.dirname(os.path.abspath(__file__))
         self.filenames = []
-        self.filenames.append(os.path.join(mainDirectory, 'Specs', 'ICRA2023Spec4.txt'))
+        self.filenames.append(os.path.join(mainDirectory, 'Specs','ICRA2023Spec4.txt'))
         self.filenames.append(os.path.join(mainDirectory, 'buchiRef.txt'))
         self.filenames.append(os.path.join(mainDirectory, 'Maps', 'openMap.txt'))
         self.filenames.append(os.path.join(mainDirectory, 'Maps', 'openNodes.txt'))
@@ -474,7 +474,13 @@ class runSpec:
         self.xR[9] = np.arctan2(self.xR[6]-centroidPoint[1],self.xR[5]-centroidPoint[0]) + np.pi/2
         self.xR[13] = np.sqrt((self.x[0]-self.xR[10])**2 + (self.x[1]-self.xR[11])**2) - self.armZero
         self.xR[14] = np.arctan2(self.xR[11]-centroidPoint[1],self.xR[10]-centroidPoint[0]) + np.pi/2
+        self.xR[14] = self.transform_to_pipi(self.xR[14])[0]
+
     def modifySpec(self):
+        self.robot.base.set_velocity(v_m=0, w_r=0)
+        self.robot.arm.set_velocity(v_m=0)
+        self.robot.lift.set_velocity(v_m=0)
+        self.robot.push_command()
         circle1 = plt.Circle((self.initXRef[15], self.initXRef[16]), .3)
         self.ax.add_patch(circle1)
         currTime = time.time()
@@ -689,8 +695,8 @@ def stopRobot(robot):
     robot.push_command()
 
 if __name__ == "__main__":
-    realRobots = 0 # Use simulation mode if True
-    logData = 0 # log data if True
+    realRobots = 1 # Use simulation mode if True
+    logData = 1 # log data if True
 
     robot = initializeRobot(realRobots)
 

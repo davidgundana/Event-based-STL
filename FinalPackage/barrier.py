@@ -76,6 +76,8 @@ def totalBarrier(specattr, ind, indOfActive):
     if bxt < 0:
         print('Barrier less than 0')
         print(bxt_i,bxt)
+        for i in range(np.size(piRobot)):
+            print(piRobot[i].hxt)
     return bxt, piRobot
 
 def partialTotalBarrier(piDis):
@@ -105,7 +107,7 @@ def partialTotalBarrier(piDis):
     return bxt
 
 def evBarrier(pi, t, x, xR ,wall,roadmap, preF,linear):
-    buffer = 5
+    buffer = 10
     if not linear and len(pi.dir) > 1:
         x[0] += .1 * np.cos(x[2])
         x[1] += .1 * np.sin(x[2])
