@@ -7,6 +7,7 @@ import barrier
 from customQP import quadprog
 import runEvBasedSTL
 import time
+import copy
 
 def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,text1, master):
     # Check to see if you care about walls. If you do, find the closest point
@@ -63,7 +64,7 @@ def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,tex
             b = alpha * (bxtx) + bPartialT[0]
 
             nominals = getAllNoms(piRobot,maxV, sizeU)
-            print(b, bxtx, bPartialT)
+            # print(b, bxtx, bPartialT)
             nom,error = getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU,x,sizeState)
     return nom,specattr, error
 
@@ -166,7 +167,7 @@ def findPoint(roadmap,x):
 
 def evalProps(specattr, roadmap, x,xR,t,maxV,sizeU,sizeState):
     for i in range(np.size(specattr)):
-        props = specattr[i].props
+        props = copy.deepcopy(specattr[i].props)
         # Find the values of all parameters
         if len(specattr[i].wall) != 0:
             wall = specattr[i].wall
@@ -180,8 +181,8 @@ def evalProps(specattr, roadmap, x,xR,t,maxV,sizeU,sizeState):
             valuesOfControl = np.asarray([valuesOfControl])
         # Assign all for the values to the propositions
         for j in range(np.size(specattr[i].controllableProp)):
-            # propName = specattr[i].controllableProp[specattr[i].controllablePropOrder[j]]
-            exec('props.pred' + str(j) + ' = ' + str(valuesOfControl[j]))
+            propName = specattr[i].controllableProp[specattr[i].controllablePropOrder[j]]
+            exec('props.' + propName + ' = ' + str(valuesOfControl[j]))
 
         specattr[i].props = props
         for j in range(len(specattr[i].Pi_mu)):

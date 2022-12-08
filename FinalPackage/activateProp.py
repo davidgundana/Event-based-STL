@@ -15,7 +15,7 @@ def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU):
     allProps2Activate = []
     allRobustness = []
     for b in range(np.size(specattr,0)):
-        props = specattr[b].props
+        props = copy.deepcopy(specattr[b].props)
         wall = specattr[b].wall
 
         if preF == 1:
@@ -141,6 +141,9 @@ def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU):
         stateLoc = np.where((allTransitions == trans2Make).all(axis=1))[0][0]
         potS[b] = int(allTransitionsWithState[stateLoc, -1])
 
+        # if potS[0] != potS[-1]:
+        #     print('here')
+
         propsLoc = (np.where(trans2Make == 1)[0]).tolist()
         props2Activate = [specattr[b].controllableProp[element] for element in propsLoc]
 
@@ -159,14 +162,15 @@ def pickSpec(specattr,allRobustness, potS, allProps2Activate):
     # Option 1: Pick one now and dont change until you get to an accepting state
     if option == 1:
         # First check to see if a spec is already chosen
-        pickNew = 0
-        if specattr[0].specToPick == []:
-            pickNew = 1
-        elif isinstance(specattr[0].specToPick, int):
-            if potS[specattr[0].specToPick] in specattr[specattr[0].specToPick].acceptingWithCycle:
-                pickNew = 1
+        pickNew = 1
+        # if specattr[0].specToPick == []:
+        #     pickNew = 1
+        # elif isinstance(specattr[0].specToPick, int):
+        #     if potS[specattr[0].specToPick] in specattr[specattr[0].specToPick].acceptingWithCycle:
+        #         pickNew = 1
 
         if pickNew:
+            print('picking new spec')
             list_len = [len(i) for i in allRobustness]
             minVal = min(list_len)
             indices = [i for i, x in enumerate(list_len) if x == minVal]
@@ -189,15 +193,20 @@ def pickSpec(specattr,allRobustness, potS, allProps2Activate):
                             indOfTrans = maxInd[0]
                         else:
                             robustCopy = [robustCopy[j] for j in maxInd]
-                            robustCopy = robustCopy[maxInd, :]
+                            # robustCopy = robustCopy[maxInd, :]
                             [robustCopy[j].remove(maxVal) for j in range(np.size(robustCopy, 0))]
                             robustCopy = [j for j in robustCopy if j]
                     else:
                         minFound = 1
                         indOfTrans = 0
+                if  specattr[0].specToPick == 1 and indices[indOfTrans] == 0:
+                    print('here')
                 specToPick = indices[indOfTrans]
             else:
+                if  specattr[0].specToPick == 1 and indices[0] == 0:
+                    print('here')
                 specToPick = indices[0]
+
             for j in range(np.size(specattr)):
                 specattr[j].specToPick = specToPick
         else:

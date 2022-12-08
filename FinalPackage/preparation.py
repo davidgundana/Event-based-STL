@@ -623,6 +623,7 @@ class buchiPrep:
         self.inpLabels = inpLabels
         self.evProps = evProps
         self.Pi_mu = Pi_mu
+        self.specToPick = []
         self.initSpec(text1,master)
 
     def initSpec(self,text1,master):

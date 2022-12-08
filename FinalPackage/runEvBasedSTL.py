@@ -40,12 +40,12 @@ class runSpec:
         self.sizeU = 6 # size of the control input
         # self.sizeU = 5 # size of the control input
 
-        self.initialState = '6,6,3.8,0,0,30' # initial state of the system
+        self.initialState = '3,3,3.8,0,0,30' # initial state of the system
         self.maxV = '0.2,0.2,0.2,0.1,0.12,15' #Maximum velocity
         # self.maxV = '0.2,0.2,0.05,0.1,12' #Maximum velocity
 
         # stretch reference values
-        self.initialStateRef = '-3,-3,0.025,0,-5,-5,-5,0,0,0,0,0,0,0,0,0,0,0,0,0,0' # Initial state of reference objects
+        self.initialStateRef = '5,-3,0.025,0,-5,-5,-5,0,0,0,0,0,0,0,0,0,0,0,0,5,-5,0,0' # Initial state of reference objects
         self.linearControl = 1 # Control affine system (default is True)
         self.running = True # initialize the system to run
         self.logData = logData # Log data flag
@@ -279,6 +279,10 @@ class runSpec:
             ywall.append(None)
         # plt.ion()
         ax.plot(xwall, ywall, color="black")
+        circle1 = plt.Circle((self.initXRef[5], self.initXRef[6]), .4)
+        ax.add_patch(circle1)
+        circle1 = plt.Circle((self.initXRef[19], self.initXRef[20]), .4)
+        ax.add_patch(circle1)
         self.objects, = ax.plot(self.initXRef[0], self.initXRef[1],'o', color="blue")
         self.ax = ax
         # circle1 = plt.Circle((self.initXRef[15], self.initXRef[16]), 1)
@@ -450,6 +454,8 @@ class runSpec:
         self.specattr[spec].evProps = evProps
 
     def checkInputs(self):
+        evaluatedMess = []
+        evaluatedMessT = []
         for i in range(np.size(self.specattr)):
             props = self.specattr[i].evProps
             x = self.x
@@ -459,9 +465,17 @@ class runSpec:
                 if eval(mess):
                     self.specattr[i].input[2 * j] = 1
                     if self.specattr[i].input[2 * j + 1] == 0 or self.specattr[i].input[2 * j + 1] > self.t:
-                        self.specattr[i].input[2 * j + 1] = self.t
+                        if mess in evaluatedMess:
+                            ind = evaluatedMess.index(mess)
+                            self.specattr[i].input[2 * j + 1] = evaluatedMessT[ind]
+                        else:
+                            self.specattr[i].input[2 * j + 1] = self.t
+                            evaluatedMess.append(mess)
+                            evaluatedMessT.append(self.t)
+
                 else:
                     self.specattr[i].input[2 * j] = 0
+
 
     def updateRef(self):
         # xR = [objectX,objectY,objectZ,thetaOrient,dist2Obj,secondObjectX,secondObjectY, secondObjectZ, dist2Obj2,thetaOrient2,,thirdObjectX, thirdObjectY, thirdObjectZ]
@@ -476,13 +490,17 @@ class runSpec:
         self.xR[14] = np.arctan2(self.xR[11]-centroidPoint[1],self.xR[10]-centroidPoint[0]) + np.pi/2
         self.xR[14] = self.transform_to_pipi(self.xR[14])[0]
 
+        self.xR[21] = np.sqrt((self.x[0]-self.xR[19])**2 + (self.x[1]-self.xR[20])**2) - self.armZero -.2
+        self.xR[22] = np.arctan2(self.xR[20]-centroidPoint[1],self.xR[19]-centroidPoint[0]) + np.pi/2
+
     def modifySpec(self):
-        self.robot.base.set_velocity(v_m=0, w_r=0)
-        self.robot.arm.set_velocity(v_m=0)
-        self.robot.lift.set_velocity(v_m=0)
-        self.robot.push_command()
-        circle1 = plt.Circle((self.initXRef[15], self.initXRef[16]), .3)
-        self.ax.add_patch(circle1)
+        if self.robot is not None:
+            self.robot.base.set_velocity(v_m=0, w_r=0)
+            self.robot.arm.set_velocity(v_m=0)
+            self.robot.lift.set_velocity(v_m=0)
+            self.robot.push_command()
+        # circle1 = plt.Circle((self.initXRef[15], self.initXRef[16]), .3)
+        # self.ax.add_patch(circle1)
         currTime = time.time()
         newSTL = self.PsiSTLnew.get("1.0",tk.END)
         newSTL = re.sub('\\n','',newSTL)
@@ -540,11 +558,13 @@ class runSpec:
                 for j in range(len(inpLabels)):
                     if any(substring in inpLabels[j][0] for substring in propositions):
                         inpLabelsAdd.append(inpRef[j])
-                    # if any(substring in list(evProps.__dict__.keys()) for substring in inpLabels):
-                    #     evPropsAdd.append(evProps[j])
+                # evPropsLabel = list(evProps.__dict__.keys())
+                # for j in range(len(evPropsLabel)):
+                #     if any(evPropsLabel[j] in inpLabels[i] for i in range(len(inpLabels))):
+                #         evPropsAdd.append(evProps[j])
                 b_gamma.inpRef = inpRefAdd
                 b_gamma.inpLabels = inpLabelsAdd
-                b_gamma.evProps = evPropsAdd
+                b_gamma.evProps = self.specattr[0].evProps
                 if gamma == '&':
                     # Generate Buchi Intersect
                     for i in range(np.size(self.specattr)):
@@ -695,8 +715,8 @@ def stopRobot(robot):
     robot.push_command()
 
 if __name__ == "__main__":
-    realRobots = 1 # Use simulation mode if True
-    logData = 1 # log data if True
+    realRobots = 0 # Use simulation mode if True
+    logData = 0 # log data if True
 
     robot = initializeRobot(realRobots)
 

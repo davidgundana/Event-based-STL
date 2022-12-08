@@ -74,10 +74,11 @@ def totalBarrier(specattr, ind, indOfActive):
         bxt = 0
 
     if bxt < 0:
-        print('Barrier less than 0')
         print(bxt_i,bxt)
         for i in range(np.size(piRobot)):
             print(piRobot[i].hxt)
+        print('Barrier less than 0')
+
     return bxt, piRobot
 
 def partialTotalBarrier(piDis):
