@@ -5,6 +5,7 @@ from math import fabs, pi
 
 def getNom(pi_mu, roadmap, x, xR, maxV,sizeU,sizeState):
     nom = np.zeros((1,sizeU))
+    indOfI = None
     if np.size(pi_mu.point) > 1:
         avoidWallsInPath = 1
         wallDistance = .5
@@ -112,6 +113,8 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU,sizeState):
         else:
             offset = 1
 
+        cost = nominal
+
         if nominal > maxV[indOfI-offset]:
             nominal = maxV[indOfI-offset]
         if sizeU != sizeState:
@@ -119,8 +122,7 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU,sizeState):
         else:
             nom[0,indOfI] = nominal
 
-        cost = nominal
-    return nom, cost
+    return nom, cost, indOfI
 
 def transform_to_pipi(input_angle):
     revolutions = int((input_angle + np.sign(input_angle) * pi) / (2 * pi))

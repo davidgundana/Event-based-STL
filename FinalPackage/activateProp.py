@@ -14,6 +14,7 @@ import itertools
 def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU):
     allProps2Activate = []
     allRobustness = []
+    specToDelete= []
     for b in range(np.size(specattr,0)):
         props = copy.deepcopy(specattr[b].props)
         wall = specattr[b].wall
@@ -37,124 +38,130 @@ def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU):
 
         # First find all accepting states that can be reached given uncontrollable propositions
         reachableAcceptCycle = findAcceptingCycle(specattr[b])
-        if np.size(potentialNextStates) == 0:
-            print('no state')
-        # print(time.time()-t1)
-        paths2Consider = []
-        for i in range(np.size(potentialNextStates)):
-            potState = potentialNextStates[i]
-            for j in range(np.size(reachableAcceptCycle)):
-                if specattr[b].nRoutes[potState,reachableAcceptCycle[j]] is None:
-                    allPaths = []
-                    if potState == reachableAcceptCycle[j]:
-                        if specattr[b].graph[potState,potState] == 1:
-                            allPaths.append([potState,potState])
+        try:
+            if np.size(potentialNextStates) == 0:
+                raise Exception("no state")
+            # print(time.time()-t1)
+            paths2Consider = []
+            for i in range(np.size(potentialNextStates)):
+                potState = potentialNextStates[i]
+                for j in range(np.size(reachableAcceptCycle)):
+                    if specattr[b].nRoutes[potState,reachableAcceptCycle[j]] is None:
+                        allPaths = []
+                        if potState == reachableAcceptCycle[j]:
+                            if specattr[b].graph[potState,potState] == 1:
+                                allPaths.append([potState,potState])
+                            else:
+                                statesTo = np.where(specattr[b].graph[:,potState]==1)[0]
+                                for jj in range(np.size(statesTo)):
+                                    for path in k_shortest_paths(specattr[b].G, potState, statesTo[jj], 5):
+                                        allPaths.append(path+ [potState])
                         else:
-                            statesTo = np.where(specattr[b].graph[:,potState]==1)[0]
-                            for jj in range(np.size(statesTo)):
-                                for path in k_shortest_paths(specattr[b].G, potState, statesTo[jj], 5):
-                                    allPaths.append(path+ [potState])
+                            for path in k_shortest_paths(specattr[b].G, potState, reachableAcceptCycle[j], 5):
+                                allPaths.append(path)
+                        specattr[b].nRoutes[potState,reachableAcceptCycle[j]] = allPaths
+                        paths2Consider.append(allPaths)
                     else:
-                        for path in k_shortest_paths(specattr[b].G, potState, reachableAcceptCycle[j], 5):
-                            allPaths.append(path)
-                    specattr[b].nRoutes[potState,reachableAcceptCycle[j]] = allPaths
-                    paths2Consider.append(allPaths)
+                        paths2Consider.append(specattr[b].nRoutes[potState,reachableAcceptCycle[j]])
+            paths2Consider = [item for sublist in paths2Consider for item in sublist]
+            if np.size(paths2Consider) == 0:
+                print('no paths!')
+
+            # check if path is valid with uncontrollable propositions
+            # paths2Consider = checkPaths(paths2Consider)
+
+            # Consider only shortest paths
+            if isinstance(paths2Consider[0], list):
+                pathLength = np.asarray([len(x) for x in paths2Consider])
+                pathIndices = np.where(pathLength == min(pathLength))[0].tolist()
+                paths2Consider = [paths2Consider[i][0:2] for i in pathIndices]
+            else:
+                paths2Consider = paths2Consider[0:2]
+
+
+            # We only care about the first transition for now
+            paths2Consider = np.asarray(paths2Consider)
+            paths2Consider = np.atleast_2d(paths2Consider)
+            paths2Consider = np.unique(paths2Consider, axis=0)
+
+            # Compute robustness for each path
+            # first find all activated propositions for all transitions
+            allTransitionsWithState = np.empty((1, len(specattr[b].controllableProp) + 1), dtype=int)
+            allTransitionsWithNextState = np.empty((1, len(specattr[b].controllableProp) + 1), dtype=int)
+
+            propRef = []
+            for i in range(np.size(paths2Consider, 0)):
+                results = np.array(specattr[b].buchiStates[int(paths2Consider[i][0])].result)
+                indCondToTran = np.where(results == int(paths2Consider[i][1]))[0]
+                if specattr[b].buchiStates[int(paths2Consider[i][0])].condCNF[indCondToTran[0]] == [] or isinstance(specattr[b].buchiStates[int(paths2Consider[i][0])].condCNF[indCondToTran[0]],tuple):
+                    specattr[b] = addCNF(specattr[b],int(paths2Consider[i][0]),indCondToTran[0])
+
+                transitionOptions = specattr[b].buchiStates[int(paths2Consider[i][0])].condCNF[indCondToTran[0]]
+                possibleTransitions = np.asarray(transitionOptions)[:, specattr[b].locOfUncontrollable]
+                acceptable = np.where((possibleTransitions == specattr[b].inputVal).all(axis = 1))[0]
+                transitionOptions = np.asarray(transitionOptions)[acceptable, :]
+                transitionOptions = np.unique(transitionOptions[:,specattr[b].locOfControllable],axis = 0)
+
+                if np.size(acceptable != 0) and np.size(transitionOptions,0) != 0:
+                    stateRef = paths2Consider[i][0] * np.ones((np.size(transitionOptions, 0), 1), dtype=int)
+                    nextRef = paths2Consider[i][1] * np.ones((np.size(transitionOptions, 0), 1), dtype=int)
+                    transitionPot = np.hstack((transitionOptions,nextRef))
+                    transitionOptions = np.hstack((transitionOptions, stateRef))
+                    allTransitionsWithState = np.vstack((allTransitionsWithState, transitionOptions))
+                    allTransitionsWithNextState = np.vstack((allTransitionsWithNextState,transitionPot))
+                    for j in range(np.size(transitionOptions, 0)):
+                        propRef.extend([i for i, x in enumerate(transitionOptions[j, :-1]) if x == 1])
                 else:
-                    paths2Consider.append(specattr[b].nRoutes[potState,reachableAcceptCycle[j]])
-        paths2Consider = [item for sublist in paths2Consider for item in sublist]
-        if np.size(paths2Consider) == 0:
-            print('no paths!')
+                    # print('no transition options for this path')
+                    pass
 
-        # check if path is valid with uncontrollable propositions
-        # paths2Consider = checkPaths(paths2Consider)
+            allTransitions, idx = np.unique(allTransitionsWithState[1:, :-1], axis=0,return_index=True)
+            allTransitions = allTransitionsWithState[1:, :-1][np.sort(idx)]
+            allTransitionsWithState = allTransitionsWithState[1:, :]
+            # check if any propositions have until tag
+            allTransitions = checkUntil(specattr[b], allTransitions)
 
-        # Consider only shortest paths
-        if isinstance(paths2Consider[0], list):
-            pathLength = np.asarray([len(x) for x in paths2Consider])
-            pathIndices = np.where(pathLength == min(pathLength))[0].tolist()
-            paths2Consider = [paths2Consider[i][0:2] for i in pathIndices]
-        else:
-            paths2Consider = paths2Consider[0:2]
+            # first we choose the transition with the most infinities. this is the highest robustness
+            numMax = np.count_nonzero(np.isinf(allTransitions), axis=1)
+            if np.size(numMax) == 0:
+                print('No transitions')
+            maxLoc = np.argwhere(numMax == np.amax(numMax)).ravel()
 
-
-        # We only care about the first transition for now
-        paths2Consider = np.asarray(paths2Consider)
-        paths2Consider = np.atleast_2d(paths2Consider)
-        paths2Consider = np.unique(paths2Consider, axis=0)
-
-        # Compute robustness for each path
-        # first find all activated propositions for all transitions
-        allTransitionsWithState = np.empty((1, len(specattr[b].controllableProp) + 1), dtype=int)
-        allTransitionsWithNextState = np.empty((1, len(specattr[b].controllableProp) + 1), dtype=int)
-
-        propRef = []
-        for i in range(np.size(paths2Consider, 0)):
-            results = np.array(specattr[b].buchiStates[int(paths2Consider[i][0])].result)
-            indCondToTran = np.where(results == int(paths2Consider[i][1]))[0]
-            if specattr[b].buchiStates[int(paths2Consider[i][0])].condCNF[indCondToTran[0]] == [] or isinstance(specattr[b].buchiStates[int(paths2Consider[i][0])].condCNF[indCondToTran[0]],tuple):
-                specattr[b] = addCNF(specattr[b],int(paths2Consider[i][0]),indCondToTran[0])
-
-            transitionOptions = specattr[b].buchiStates[int(paths2Consider[i][0])].condCNF[indCondToTran[0]]
-            possibleTransitions = np.asarray(transitionOptions)[:, specattr[b].locOfUncontrollable]
-            acceptable = np.where((possibleTransitions == specattr[b].inputVal).all(axis = 1))[0]
-            transitionOptions = np.asarray(transitionOptions)[acceptable, :]
-            transitionOptions = np.unique(transitionOptions[:,specattr[b].locOfControllable],axis = 0)
-
-            if np.size(acceptable != 0) and np.size(transitionOptions,0) != 0:
-                stateRef = paths2Consider[i][0] * np.ones((np.size(transitionOptions, 0), 1), dtype=int)
-                nextRef = paths2Consider[i][1] * np.ones((np.size(transitionOptions, 0), 1), dtype=int)
-                transitionPot = np.hstack((transitionOptions,nextRef))
-                transitionOptions = np.hstack((transitionOptions, stateRef))
-                allTransitionsWithState = np.vstack((allTransitionsWithState, transitionOptions))
-                allTransitionsWithNextState = np.vstack((allTransitionsWithNextState,transitionPot))
-                for j in range(np.size(transitionOptions, 0)):
-                    propRef.extend([i for i, x in enumerate(transitionOptions[j, :-1]) if x == 1])
+            ids = []
+            if np.size(maxLoc) == 1:
+                # only one maximum robustness
+                trans2Make = allTransitions[maxLoc[0]]
+                if np.all(trans2Make == np.inf):
+                    robustness = []
+                else:
+                    trans2Make,robustness, ids = pickTransition(specattr[b], np.array([trans2Make]), x, props, t, wall, xR, preF,roadmap,maxV,sizeU)
             else:
-                # print('no transition options for this path')
-                pass
+                # Need to break the tie by computing robustness for those that are tied
+                allTransMax = allTransitions[maxLoc, :]
+                trans2Make,robustness, ids = pickTransition(specattr[b], allTransMax, x, props, t, wall, xR, preF,roadmap,maxV,sizeU)
 
-        allTransitions, idx = np.unique(allTransitionsWithState[1:, :-1], axis=0,return_index=True)
-        allTransitions = allTransitionsWithState[1:, :-1][np.sort(idx)]
-        allTransitionsWithState = allTransitionsWithState[1:, :]
-        # check if any propositions have until tag
-        allTransitions = checkUntil(specattr[b], allTransitions)
+            stateLoc = np.where((allTransitions == trans2Make).all(axis=1))[0][0]
+            potS[b] = int(allTransitionsWithState[stateLoc, -1])
 
-        # first we choose the transition with the most infinities. this is the highest robustness
-        numMax = np.count_nonzero(np.isinf(allTransitions), axis=1)
-        if np.size(numMax) == 0:
-            print('No transitions')
-        maxLoc = np.argwhere(numMax == np.amax(numMax)).ravel()
+            # if potS[0] != potS[-1]:
+            #     print('here')
 
-        ids = []
-        if np.size(maxLoc) == 1:
-            # only one maximum robustness
-            trans2Make = allTransitions[maxLoc[0]]
-            if np.all(trans2Make == np.inf):
-                robustness = []
-            else:
-                trans2Make,robustness, ids = pickTransition(specattr[b], np.array([trans2Make]), x, props, t, wall, xR, preF,roadmap,maxV,sizeU)
-        else:
-            # Need to break the tie by computing robustness for those that are tied
-            allTransMax = allTransitions[maxLoc, :]
-            trans2Make,robustness, ids = pickTransition(specattr[b], allTransMax, x, props, t, wall, xR, preF,roadmap,maxV,sizeU)
+            propsLoc = (np.where(trans2Make == 1)[0]).tolist()
+            props2Activate = [specattr[b].controllableProp[element] for element in propsLoc]
 
-        stateLoc = np.where((allTransitions == trans2Make).all(axis=1))[0][0]
-        potS[b] = int(allTransitionsWithState[stateLoc, -1])
-
-        # if potS[0] != potS[-1]:
-        #     print('here')
-
-        propsLoc = (np.where(trans2Make == 1)[0]).tolist()
-        props2Activate = [specattr[b].controllableProp[element] for element in propsLoc]
-
-        allProps2Activate.append(props2Activate)
-        allRobustness.append(robustness)
-        # print(time.time()-t1)
+            allProps2Activate.append(props2Activate)
+            allRobustness.append(robustness)
+            # print(time.time()-t1)
+        except:
+            print('No state. Deleteing Buchi')
+            specToDelete.append(b)
 
     #determine which to buchi to follow
     if len(specattr) > 1 and any(allRobustness):
         specattr, props2Activate, potS, robustness = pickSpec(specattr, allRobustness, potS, allProps2Activate)
 
+    if len(specToDelete) > 0:
+        specattr.pop(specToDelete[0])
     return specattr,props2Activate,potS,robustness, ids
 
 def pickSpec(specattr,allRobustness, potS, allProps2Activate):

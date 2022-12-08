@@ -206,10 +206,17 @@ def evalProps(specattr, roadmap, x,xR,t,maxV,sizeU,sizeState):
                 specattr[i].Pi_mu[j].distFromSafe = cost + signF * specattr[i].Pi_mu[j].p
             else:
                 rob =  specattr[i].Pi_mu[j].robotsInvolved[0]
-                nomR, cost = getNom(specattr[i].Pi_mu[j], roadmap, x, xR,maxV[sizeU * rob - sizeU:sizeU*rob],sizeU,sizeState)
+                nomR, cost, indOfI = getNom(specattr[i].Pi_mu[j], roadmap, x, xR,maxV[sizeU * rob - sizeU:sizeU*rob],sizeU,sizeState)
                 signF = specattr[i].Pi_mu[j].signFS[0]
-                specattr[i].Pi_mu[j].distFromSafe = cost + signF *  specattr[i].Pi_mu[j].p
-                specattr[i].Pi_mu[j].time2Finish = specattr[i].Pi_mu[j].distFromSafe / maxV[sizeU * rob - sizeU]
+                # specattr[i].Pi_mu[j].distFromSafe = cost + signF *  specattr[i].Pi_mu[j].p
+                specattr[i].Pi_mu[j].distFromSafe = cost
+                if indOfI is None:
+                    specattr[i].Pi_mu[j].time2Finish = specattr[i].Pi_mu[j].distFromSafe / maxV[
+                        sizeU * rob - sizeU]
+                else:
+                    specattr[i].Pi_mu[j].time2Finish = specattr[i].Pi_mu[j].distFromSafe / maxV[sizeU * rob - sizeU + indOfI]
+                if specattr[i].Pi_mu[j].time2Finish > 250:
+                    print('here')
             specattr[i].Pi_mu[j].nom[1, 0:np.size(nomR)] = nomR
     return specattr
 
