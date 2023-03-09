@@ -105,8 +105,11 @@ def getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU,x,sizeState):
     nomInd = qp.result.x
     if sizeU == sizeState:
         # convert to v omega
-        newNom = helperFuncs.feedbackLin(nomInd[0], nomInd[1], x[2], .4, maxV[0])
+        print('nominalPre ',nomInd)
+        newNom = helperFuncs.feedbackLin(nomInd[0], nomInd[1], x[2], .11, maxV[0])
         nomInd = newNom
+        if newNom[0]!=nomInd[0]:
+            print('here')
         # if newNom[1] != 0 and np.abs(nomInd[2]) > 0.00001:
         #     print('confict')
         # nomRet = np.zeros((1,5))

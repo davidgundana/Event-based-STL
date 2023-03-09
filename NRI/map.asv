@@ -3,20 +3,20 @@ clc
 close all
 
 
-% Settings
-findWaypoints = 0;
-findWalls = 1;    
+% Settings 1 on 0 off. Only 1 at a time
+findWaypoints = 1;
+findWalls = 0;    
 addoffset = 0;
 
 % Filenames
-fileOfI = 'hallwaymap';
+fileOfI = 'rhodesFinal';
 
-yamlFile = readlines(fileOfI+'.yaml');
+yamlFile = readlines(strcat(fileOfI,'.yaml'));
 offString = yamlFile(3);
 offSplit = regexp(offString,'\d+\.?\d*','match');
 offS = -[str2double(offSplit(1)),str2double(offSplit(2))];
 
-image = imread(fileOfI+'pgm');
+image = imread(strcat(fileOfI,'.pgm'));
 imshow(image)
 
 imageNorm = double(image)/255;
@@ -29,7 +29,7 @@ show(occMap)
 hold on
 
 try
-    oldWalls = cell2mat(readcell(mapFile + 'txt'));
+    oldWalls = cell2mat(readcell(strcat(fileOfI, '_walls.txt')));
 
     if addoffset == 1
         oldWalls(:,1) = oldWalls(:,1) + offS(1);
@@ -44,7 +44,7 @@ catch
 end
 
 try
-    oldWaypoints = cell2mat(readcell('waypoints.txt'));
+    oldWaypoints = cell2mat(readcell(strcat(fileOfI,'_waypoints.txt')));
 
     if addoffset == 1
         oldWaypoints = oldWaypoints + offS;
@@ -55,9 +55,12 @@ try
 catch
 end
 
-
-
-% [x,y] = ginput(4);
+plot(33, -18, 'bo')
+% xlim([-10 20]);
+% ylim([-10 10]);
+% n is the number of points you want to click
+n = 1;
+[x,y] = ginput(n);
 
 if findWalls == 1
     point1x = x(1:2:end);
@@ -72,21 +75,20 @@ if findWalls == 1
     catch
         newWalls = walls;
     end
-    
-    writematrix(newWalls,'walls.txt','Delimiter','space')
-    type 'walls.txt'
+    wallFile = strcat(fileOfI,'_walls.txt');
+    writematrix(newWalls,wallFile,'Delimiter','space')
 end
 
 if findWaypoints == 1
-    waypoints = [x,y];
     try
+        waypoints = [x,y];
         newWaypoints = [waypoints;oldWaypoints];
     catch
         newWaypoints = waypoints;
     end
     
-    writematrix(newWaypoints,'waypoints.txt','Delimiter','space')
-    type 'waypoints.txt'
+    waypointsFile = strcat(fileOfI,'_waypoints.txt');
+    writematrix(newWaypoints,waypointsFile,'Delimiter','space')
 
 end
 hold on

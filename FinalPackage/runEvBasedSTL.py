@@ -42,7 +42,7 @@ class runSpec:
         # self.sizeU = 5 # size of the control input
 
         self.initialState = '0,0,0' # initial state of the system
-        self.maxV = '1.1,1.1,1' #Maximum velocity
+        self.maxV = '0.8,0.8,0.8' #Maximum velocity
         # self.maxV = '0.2,0.2,0.05,0.1,12' #Maximum velocity
 
         # stretch reference values
@@ -65,8 +65,8 @@ class runSpec:
         self.filenames = []
         self.filenames.append(os.path.join(mainDirectory, 'Specs','NRISPEC.txt'))
         self.filenames.append(os.path.join(mainDirectory, 'buchiRef.txt'))
-        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'hallwaymap_walls.txt'))
-        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'hallwaymap_waypoints.txt'))
+        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'rhodesFinal_walls.txt'))
+        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'rhodesFinal_waypoints.txt'))
         self.filenames.append(os.path.join(mainDirectory, 'Maps', ''))
         self.filenames.append(os.path.join(mainDirectory, 'Maps', ''))
         self.stretch = 0

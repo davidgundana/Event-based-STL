@@ -3,13 +3,13 @@ clc
 close all
 
 
-% Settings
+% Settings 1 on 0 off. Only 1 at a time
 findWaypoints = 1;
 findWalls = 0;    
 addoffset = 0;
 
 % Filenames
-fileOfI = 'hallwaymap';
+fileOfI = 'rhodesFinal';
 
 yamlFile = readlines(strcat(fileOfI,'.yaml'));
 offString = yamlFile(3);
@@ -55,9 +55,12 @@ try
 catch
 end
 
-
-
-% [x,y] = ginput(3);
+plot(33, -18.25, 'bo')
+% xlim([-10 20]);
+% ylim([-10 10]);
+% n is the number of points you want to click
+n = 1;
+[x,y] = ginput(n);
 
 if findWalls == 1
     point1x = x(1:2:end);

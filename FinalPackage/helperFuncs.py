@@ -36,6 +36,8 @@ def distWall(p1, p2, pt):
             dy = pt[1] - p1[1]
             if pt.ndim > 1:
                 dist = np.zeros((1,np.size(pt,0)))[0]
+            else:
+                dist=0
             # dist = np.sqrt(dx ** 2 + dy ** 2) * np.ones((1,np.size(pt,0)))[0]
         else:
             if pt.ndim > 1:
@@ -79,7 +81,6 @@ def distWall(p1, p2, pt):
                 dx = pt[0] - closestP[0]
                 dy = pt[1] - closestP[1]
                 dist = np.sqrt(dx ** 2 + dy ** 2)
-
         return dist, closestP
 
 def feedbackLin(vx, vy, theta, epsilon,maxV):
@@ -94,7 +95,7 @@ def feedbackLin(vx, vy, theta, epsilon,maxV):
     return [cmdV,cmdW]
 
 def limitCMDs(fwdVel,angVel,maxV,wheel2Center):
-    maxW = maxV / wheel2Center
+    maxW = (maxV / wheel2Center)/6
 
     ratioV = abs(fwdVel / maxV)
     ratioW = abs(angVel / maxW)

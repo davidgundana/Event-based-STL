@@ -21,6 +21,7 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU,sizeState):
             if min(dist2closest1) > wallDistance:
                 canReach = 1
 
+
         if canReach == 0:
             # Find the closest nodes to the goal
             dist2p = np.sqrt((point1 - roadmap.nodes[:, 0]) ** 2 +
@@ -43,6 +44,7 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU,sizeState):
 
             closestGoalInd = closestGoalInd[0]
             closestGoal = roadmap.nodes[closestGoalInd]
+
 
             # Find the closest nodes to the start
             dist2p2 = np.sqrt((startPos[0] - roadmap.nodes[:, 0]) ** 2 + (startPos[1] - roadmap.nodes[:, 1]) ** 2)
@@ -82,7 +84,12 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU,sizeState):
 
                 cost = costToStart + costToGoal + pathCost
         else:
-            nom[0,0:2] = np.array([point1,point2]) - startPos
+            #Still need to bound the nominal
+            tempNom = np.array([point1,point2]) - startPos
+            mag = np.linalg.norm(tempNom)
+            boundedNom = maxV[0] * (tempNom / mag)
+
+            nom[0,0:2] = boundedNom
             # nom = np.hstack((nom, 0))
             cost = np.sqrt((point1 - startPos[0]) ** 2 + (point2 - startPos[1]) ** 2)
         if sizeU != sizeState:
@@ -125,8 +132,11 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU,sizeState):
             nom[0,indOfI-1] = nominal
         else:
             nom[0,indOfI] = nominal
-
-    return nom, cost, indOfI
+    try:
+        return nom, cost, indOfI
+    except:
+        print('fail')
+        pass
 
 def transform_to_pipi(input_angle):
     revolutions = int((input_angle + np.sign(input_angle) * pi) / (2 * pi))
