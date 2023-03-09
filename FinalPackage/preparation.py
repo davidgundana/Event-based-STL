@@ -338,7 +338,7 @@ def findEvents(mu, parseTree):
                     while foundTemp == 0:
                         pString = pString + '.parent()'
                         parent = eval(pString)
-                        for i in range(np.size(parent)):
+                        for i in range(len(parent)):
                             if 'un_' in parent[i]:
                                 foundTemp = 1
 

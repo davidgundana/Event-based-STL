@@ -8,7 +8,7 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU,sizeState):
     indOfI = None
     if np.size(pi_mu.point) > 1:
         avoidWallsInPath = 1
-        wallDistance = .5
+        wallDistance = .05
         startPos = x[3 * (pi_mu.robotsInvolved[0] - 1):3 * (pi_mu.robotsInvolved[0] - 1) + 2]
         canReach = 0
         point1 = eval(str(pi_mu.point[0]))
@@ -69,7 +69,11 @@ def getNom(pi_mu, roadmap, x, xR, maxV,sizeU,sizeState):
             if np.size(distToGoals) != 0:
                 indOfNext = np.argmin(distToGoals)
                 wayPoint = roadmap.nodes[closestStartInd[indOfNext], :]
-                nom[0,0:2] = wayPoint - startPos
+                tempNom = wayPoint - startPos
+                mag = np.linalg.norm(tempNom)
+                boundedNom = maxV[0] * (tempNom/mag)
+
+                nom[0,0:2] = boundedNom
                 # nom = np.hstack((nom, 0))
                 closestStart = roadmap.nodes[closestStartInd[indOfNext]]
                 costToStart = np.sqrt((closestStart[0] - startPos[0]) ** 2 + (closestStart[1] - startPos[1]) ** 2)

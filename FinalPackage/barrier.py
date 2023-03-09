@@ -108,7 +108,7 @@ def partialTotalBarrier(piDis):
     return bxt
 
 def evBarrier(pi, t, x, xR ,wall,roadmap, preF,linear):
-    buffer = 10
+    buffer = 30
     if not linear and len(pi.dir) > 1:
         x[0] += .1 * np.cos(x[2])
         x[1] += .1 * np.sin(x[2])

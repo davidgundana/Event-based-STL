@@ -21,7 +21,7 @@ def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,tex
     specattr = evalProps(specattr, roadmap, x, xR, t, maxV,sizeU,sizeState)
 
     # Find Propositions to activate based on the current state and transitiosn to an accepting state
-    specattr, props2Activate, potS, _,_ = act.activate(specattr,potS,roadmap, 0,[],x, xR,t, maxV, sizeU)
+    specattr, props2Activate, potS, _,conflictOrder = act.activate(specattr,potS,roadmap, 0,[],x, xR,t, maxV, sizeU,sizeState)
     # print(props2Activate)
 
     if preFailure:
@@ -63,20 +63,27 @@ def synthesis(specattr,potS, roadmap,x,xR, t,maxV,sizeState,sizeU,preFailure,tex
             alpha = 1
             b = alpha * (bxtx) + bPartialT[0]
 
-            nominals = getAllNoms(piRobot,maxV, sizeU)
+            nominals = getAllNoms(piRobot,maxV, sizeU,conflictOrder)
             # print(b, bxtx, bPartialT)
             nom,error = getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU,x,sizeState)
     return nom,specattr, error
 
-def getAllNoms(piRobot, maxV,sizeU):
+def getAllNoms(piRobot, maxV,sizeU,conflictOrder):
     sumNom = np.zeros((1, sizeU), dtype=float)
     nominals = piRobot[0].nom[0,:]
     for j in range(np.size(piRobot)):
         if np.sum(abs(piRobot[j].nom[1, :])) != 0:
-            # velBound = maxV[piRobot[j].nom[0, 0:].astype(int)]
-            sumNom += piRobot[j].nom[1,:]
+            # For stretch
+            sumNom = np.vstack((sumNom, piRobot[j].nom[1,:]))
 
-    nominals = np.vstack((nominals, sumNom))
+    if np.size(sumNom,0) > 2:
+        print('conflict')
+        #priorize based off what was given from robustness
+        sumNom = piRobot[conflictOrder[0]].nom[1,:]
+        nominals = np.vstack((nominals, sumNom))
+    else:
+        nominals = np.vstack((nominals, sumNom[1, :]))
+
     return nominals
 
 def getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU,x,sizeState):
@@ -98,16 +105,17 @@ def getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU,x,sizeState):
     nomInd = qp.result.x
     if sizeU == sizeState:
         # convert to v omega
-        newNom = helperFuncs.feedbackLin(nomInd[0], nomInd[1], x[2], .1, maxV[0])
-        if newNom[1] != 0 and np.abs(nomInd[2]) > 0.00001:
-            print('confict')
-        nomRet = np.zeros((1,5))
-        nomRet[0,1:] = nomInd[-4:]
-        if newNom[1] == 0:
-            nomRet[0,0] = newNom[0]
-        else:
-            nomRet[0,0:2] = newNom
-        nomInd = nomRet[0]
+        newNom = helperFuncs.feedbackLin(nomInd[0], nomInd[1], x[2], .4, maxV[0])
+        nomInd = newNom
+        # if newNom[1] != 0 and np.abs(nomInd[2]) > 0.00001:
+        #     print('confict')
+        # nomRet = np.zeros((1,5))
+        # nomRet[0,1:] = nomInd[-4:]
+        # if newNom[1] == 0:
+        #     nomRet[0,0] = newNom[0]
+        # else:
+        #     nomRet[0,0:2] = newNom
+        # nomInd = nomRet[0]
     # if nomInd[2] != 0:
     #     print('here')
     if not qp.result.success:

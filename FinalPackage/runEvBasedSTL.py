@@ -31,21 +31,22 @@ import helperFuncs
 import forwardBuchi
 from datetime import datetime
 import signal
-
+from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
+import threading
 
 class runSpec:
-    def __init__(self,robot,logData):
+    def __init__(self,robot,simType, logData):
         self.robot = robot
-        self.sizeState = 6 # state size of a robot
-        self.sizeU = 6 # size of the control input
+        self.sizeState = 3 # state size of a robot
+        self.sizeU = 3 # size of the control input
         # self.sizeU = 5 # size of the control input
 
-        self.initialState = '3,3,3.8,0,0,30' # initial state of the system
-        self.maxV = '0.2,0.2,0.2,0.1,0.12,15' #Maximum velocity
+        self.initialState = '0,0,0' # initial state of the system
+        self.maxV = '1.1,1.1,1' #Maximum velocity
         # self.maxV = '0.2,0.2,0.05,0.1,12' #Maximum velocity
 
         # stretch reference values
-        self.initialStateRef = '5,-3,0.025,0,-5,-5,-5,0,0,0,0,0,0,0,0,0,0,0,0,5,-5,0,0' # Initial state of reference objects
+        self.initialStateRef = '5,-3' # Initial state of reference objects
         self.linearControl = 1 # Control affine system (default is True)
         self.running = True # initialize the system to run
         self.logData = logData # Log data flag
@@ -62,13 +63,21 @@ class runSpec:
         # Default spec location
         mainDirectory = os.path.dirname(os.path.abspath(__file__))
         self.filenames = []
-        self.filenames.append(os.path.join(mainDirectory, 'Specs','ICRA2023Spec4.txt'))
+        self.filenames.append(os.path.join(mainDirectory, 'Specs','NRISPEC.txt'))
         self.filenames.append(os.path.join(mainDirectory, 'buchiRef.txt'))
-        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'openMap.txt'))
-        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'openNodes.txt'))
+        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'hallwaymap_walls.txt'))
+        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'hallwaymap_waypoints.txt'))
         self.filenames.append(os.path.join(mainDirectory, 'Maps', ''))
         self.filenames.append(os.path.join(mainDirectory, 'Maps', ''))
-
+        self.stretch = 0
+        self.rosRobot = 0
+        if simType == 'stretch' and robot is not None:
+            self.stretch = 1
+        if simType == 'ros' and robot is not None:
+            self.rosRobot = 1
+            self.rosTime = []
+            self.rosLoc = []
+            self.rosTimeDiff = []
         try:
             import spot
             self.bypassbuchi = 0
@@ -135,7 +144,11 @@ class runSpec:
         self.gamma = b_gamma
         specParams = [self.gamma, roadmap, master,text1]
         signal.signal(signal.SIGINT, self.sigint_handler)
-        tk.Button(master, text='Execute', command=(lambda e=specParams: self.runSpec(e))).grid(row=14, column=3, sticky=tk.W, pady=6)
+        if self.rosRobot:
+            tk.Button(master, text='Execute', command=(lambda e=specParams: self.runSpecRos(e))).grid(row=14, column=3, sticky=tk.W, pady=6)
+        else:
+            tk.Button(master, text='Execute', command=(lambda e=specParams: self.runSpec(e))).grid(row=14, column=3, sticky=tk.W, pady=6)
+
 
     def receive_rigid_body_frame(self, id, position, rotation_quaternion):
         # Position and rotation received
@@ -160,6 +173,29 @@ class runSpec:
         if id == 35 and position != []:
             self.objectPosition5 = position
 
+    def jackalPose(self, data):
+        try:
+            oldPosition = self.position[0:2]
+        except:
+            oldPosition = None
+        self.position = 3*[[]]
+        self.position[0] = data.pose.pose.position.x
+        self.position[1] = data.pose.pose.position.y
+        newRot = (data.pose.pose.orientation.x, data.pose.pose.orientation.y,
+                                           data.pose.pose.orientation.z, data.pose.pose.orientation.w)
+        self.position[2] = quaternion_to_euler(newRot)[2]
+        self.position[2] = self.transform_to_pipi((np.pi / 180) * (self.position[2]))[0]
+
+        if oldPosition is not None:
+            poseDiff = np.sqrt((self.position[0]-oldPosition[0])**2 + (self.position[1] - oldPosition[1])**2 )
+            self.rosLoc.append(poseDiff)
+        try:
+            self.rosTime.append(self.t)
+            self.rosTimeDiff.append(self.rosTime[-1]-self.rosTime[-2])
+        except:
+            pass
+
+        print('Jackal Pose: x:{}, y:{}, theta:{}'.format(self.position[0],self.position[1],self.position[2]))
     def transform_to_pipi(self,input_angle):
         revolutions = int((input_angle + np.sign(input_angle) * pi) / (2 * pi))
 
@@ -181,22 +217,38 @@ class runSpec:
 
         return remainder
 
+    def runSpecRos(self, specParams):
+        import rospy
+        print('starting ros listener')
+        rospy.init_node('listener', anonymous=True)
+
+        rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, self.jackalPose, queue_size=1)
+        self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+
+
+        print('Connected to Jackal Pose')
+        print('Starting Thread')
+
+        self.thread = threading.Thread(target=self.runSpec(specParams))
+        self.thread.daemon = True
+        self.thread.start()
+
+
+        rospy.spin()
+        self.runSpec(specParams)
     def runSpec(self, specParams):
         if self.robot is not None:
-            clientAddress = "199.168.1.72"
-            optitrackServerAddress = "199.168.1.164"
+            if self.stretch:
+                clientAddress = "199.168.1.72"
+                optitrackServerAddress = "199.168.1.164"
 
-            # This will create a new NatNet client
-            streaming_client = NatNetClient()
-            streaming_client.set_client_address(clientAddress)
-            streaming_client.set_server_address(optitrackServerAddress)
-            streaming_client.set_use_multicast(True)
-            # Configure the streaming client to call our rigid body handler on the emulator to send data out.
-            streaming_client.rigid_body_listener = self.receive_rigid_body_frame
-
-            # Start up the streaming client now that the callbacks are set up.
-            # This will run perpetually, and operate on a separate thread.
-            is_running = streaming_client.run()
+                # This will create a new NatNet client
+                streaming_client = NatNetClient()
+                streaming_client.set_client_address(clientAddress)
+                streaming_client.set_server_address(optitrackServerAddress)
+                streaming_client.set_use_multicast(True)
+                # Configure the streaming client to call our rigid body handler on the emulator to send data out.
+                streaming_client.rigid_body_listener = self.receive_rigid_body_frame
 
         self.psi = self.STL_list[0][0]
         self.psinew = self.STL_list[0][0]
@@ -258,10 +310,11 @@ class runSpec:
             arc_xs = self.initX[3*i] + self.wheel2Center * np.cos(arc_angles)
             arc_ys = self.initX[3*i+1] + self.wheel2Center * np.sin(arc_angles)
             self.robotArc[str(i)], = ax.plot(arc_xs, arc_ys, color='red')
-            armX = [self.initX[3*i],self.initX[3*i]]
-            armY = [self.initX[3*i],self.initX[3*i]]
-            self.robotArm[str(i)], = ax.plot(armX, armY )
-            self.robotArm[str(i)].set_color(self.cm(40))
+            if self.stretch:
+                armX = [self.initX[3*i],self.initX[3*i]]
+                armY = [self.initX[3*i],self.initX[3*i]]
+                self.robotArm[str(i)], = ax.plot(armX, armY )
+                self.robotArm[str(i)].set_color(self.cm(40))
 
 
         plot1 = FigureCanvasTkAgg(fig, master=self.master)
@@ -279,10 +332,12 @@ class runSpec:
             ywall.append(None)
         # plt.ion()
         ax.plot(xwall, ywall, color="black")
-        circle1 = plt.Circle((self.initXRef[5], self.initXRef[6]), .4)
-        ax.add_patch(circle1)
-        circle1 = plt.Circle((self.initXRef[19], self.initXRef[20]), .4)
-        ax.add_patch(circle1)
+        ax.axis('scaled')
+
+        # circle1 = plt.Circle((self.initXRef[5], self.initXRef[6]), .4)
+        # ax.add_patch(circle1)
+        # circle1 = plt.Circle((self.initXRef[19], self.initXRef[20]), .4)
+        # ax.add_patch(circle1)
         self.objects, = ax.plot(self.initXRef[0], self.initXRef[1],'o', color="blue")
         self.ax = ax
         # circle1 = plt.Circle((self.initXRef[15], self.initXRef[16]), 1)
@@ -321,50 +376,64 @@ class runSpec:
                 '''
                 print('--------------------------------------------------------------')
                 if self.robot is not None:
-                    angle = self.transform_to_pipi((np.pi/180)*(self.rotations[2]))[0]
-                    self.x[0]= self.position[0]
-                    self.x[1] = self.position[1]
-                    self.x[2] = angle
-                    # print(self.x[0:3])
-                    self.x[3] = self.position[3]
-                    self.x[4] = self.position[4]
-                    self.x[5] = self.robot.end_of_arm.status['stretch_gripper']['pos_pct']
-                    self.xR[0] = self.objectPosition[0]
-                    self.xR[1] = self.objectPosition[1]
-                    self.xR[2] = self.objectPosition[2] - self.offsetZ[0]
-                    #depot position
-                    self.xR[5] = self.objectPosition2[0]
-                    self.xR[6] = self.objectPosition2[1]
-                    self.xR[7] = self.objectPosition2[2] - self.offsetZ[1]
-                    self.xR[10] = self.objectPosition3[0]
-                    self.xR[11] = self.objectPosition3[1]
-                    self.xR[12] = self.objectPosition3[2] - self.offsetZ[2]
-                    self.xR[15] = self.objectPosition4[0]
-                    self.xR[16] = self.objectPosition4[1]
-                    self.xR[17] = self.objectPosition5[0]
-                    self.xR[18] = self.objectPosition5[1]
+                    if self.stretch:
+                        angle = self.transform_to_pipi((np.pi/180)*(self.rotations[2]))[0]
+                        self.x[0]= self.position[0]
+                        self.x[1] = self.position[1]
+                        self.x[2] = angle
+                        # print(self.x[0:3])
+                        self.x[3] = self.position[3]
+                        self.x[4] = self.position[4]
+                        self.x[5] = self.robot.end_of_arm.status['stretch_gripper']['pos_pct']
+                        self.xR[0] = self.objectPosition[0]
+                        self.xR[1] = self.objectPosition[1]
+                        self.xR[2] = self.objectPosition[2] - self.offsetZ[0]
+                        #depot position
+                        self.xR[5] = self.objectPosition2[0]
+                        self.xR[6] = self.objectPosition2[1]
+                        self.xR[7] = self.objectPosition2[2] - self.offsetZ[1]
+                        self.xR[10] = self.objectPosition3[0]
+                        self.xR[11] = self.objectPosition3[1]
+                        self.xR[12] = self.objectPosition3[2] - self.offsetZ[2]
+                        self.xR[15] = self.objectPosition4[0]
+                        self.xR[16] = self.objectPosition4[1]
+                        self.xR[17] = self.objectPosition5[0]
+                        self.xR[18] = self.objectPosition5[1]
+                    elif self.rosRobot:
+                        self.x[0] = self.position[0]
+                        self.x[1] = self.position[1]
+                        self.x[2] = self.position[2]
 
-                print('t: {}, X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}'.format(round(self.t,2),round(self.x[0],2),round(self.x[1],2),
-                   round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),round(self.x[5],2)))
+                # print('t: {}, X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}'.format(round(self.t,2),round(self.x[0],2),round(self.x[1],2),
+                #    round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),round(self.x[5],2)))
+                print('t: {}, X: {}, Y: {}, Theta: {}'.format(round(self.t,2),round(self.x[0],2),round(self.x[1],2),
+                   round(self.x[2],2)))
+                if self.rosRobot:
+                    try:
+                        print('Max localization jump: {} units, latest frame time since loc update: {}s'.format(round(max(self.rosLoc[-1],2)), round(self.rosTimeDiff[-1],2)))
+                    except:
+                        pass
                 self.checkInputs()
-                self.updateRef()
+                if self.stretch:
+                    self.updateRef()
                 t1 = time.time()
                 nom, self.specattr,error = control.synthesis(self.specattr, self.potS, self.roadmap, self.x, self.xR, self.t, self.maxV, self.sizeState,self.sizeU, self.preFailure, self.text1, self.master)
                 # print('synth Time: ', time.time()-t1)
                 if error and self.robot is not None:
-                    self.robot.base.set_velocity(v_m=0, w_r=0)
-                    self.robot.arm.set_velocity(v_m=0)
-                    self.robot.lift.set_velocity(v_m=0)
-                    self.robot.end_of_arm.move_by('stretch_gripper', 0)
-                    self.robot.push_command()
-                    self.robot.base.set_velocity(v_m=0, w_r=0)
-                    self.robot.arm.set_velocity(v_m=0)
-                    self.robot.lift.set_velocity(v_m=0)
-                    self.robot.push_command()
+                    if self.stretch:
+                        self.robot.base.set_velocity(v_m=0, w_r=0)
+                        self.robot.arm.set_velocity(v_m=0)
+                        self.robot.lift.set_velocity(v_m=0)
+                        self.robot.end_of_arm.move_by('stretch_gripper', 0)
+                        self.robot.push_command()
+                        self.robot.base.set_velocity(v_m=0, w_r=0)
+                        self.robot.arm.set_velocity(v_m=0)
+                        self.robot.lift.set_velocity(v_m=0)
+                        self.robot.push_command()
 
-                    time.sleep(2)
-                    self.robot.base.set_velocity(v_m=0, w_r=0)
-                    self.robot.push_command()
+                        time.sleep(2)
+                        self.robot.base.set_velocity(v_m=0, w_r=0)
+                        self.robot.push_command()
                     print('stopping robot')
                     self.running = False 
                 elif error:
@@ -383,10 +452,30 @@ class runSpec:
                 for i in range(int(self.M)):
                     d = nom[0][3 * i]
                     phi = nom[0][3 * i + 1]
-                    vD = nom[0][3 * i + 2]
-                    vZ = nom[0][3 * i + 3]
-                    vGrip = nom[0][3 * i + 4]
-                    print('Vd: {}, vOmega: {}, vD: {},vZ: {}, vGrip: {}'.format(d,phi,vD,vZ,vGrip))
+
+                    print('Vd: {}, vOmega: {}'.format(d, phi))
+                    if self.stretch:
+                        vD = nom[0][3 * i + 2]
+                        vZ = nom[0][3 * i + 3]
+                        vGrip = nom[0][3 * i + 4]
+                        print('Vd: {}, vOmega: {}, vD: {},vZ: {}, vGrip: {}'.format(d,phi,vD,vZ,vGrip))
+
+                        self.robot.base.set_velocity(v_m=d, w_r=phi)
+                        self.robot.arm.set_velocity(v_m=vD)
+                        self.robot.lift.set_velocity(v_m=vZ)
+                        self.robot.end_of_arm.move_by('stretch_gripper', vGrip)
+                        self.robot.push_command()
+                    if self.rosRobot:
+                        vel_msg = Twist()
+
+                        vel_msg.linear.x = nom[0][0]
+                        vel_msg.linear.y = 0
+                        vel_msg.linear.z = 0
+                        vel_msg.angular.x = 0
+                        vel_msg.angular.y = 0
+                        vel_msg.angular.z = nom[0][1]
+                        self.pub.publish(vel_msg)
+
                     if self.logData:
                         nextRow = [self.t] + self.x.tolist() + nom[0].tolist() + self.xR.tolist()
                         for j in range(np.size(self.specattr)):
@@ -395,19 +484,14 @@ class runSpec:
                         nextRow += [self.psi] + [self.psinew]
                         self.log.append(nextRow)
 
-                    if self.robot is not None:
-                        self.robot.base.set_velocity(v_m=d, w_r=phi)
-                        self.robot.arm.set_velocity(v_m=vD)
-                        self.robot.lift.set_velocity(v_m=vZ)
-                        self.robot.end_of_arm.move_by('stretch_gripper', vGrip)
-                        self.robot.push_command()
-                    else:
+                    if self.robot is None:
                         newPos = helperFuncs.integrateOdom([d,phi],self.x[3*i:3*i+3])
                         self.x[3 * i:3 * i + 3] = newPos
                         self.x[2] = self.transform_to_pipi(self.x[2])[0]
-                        self.x[3*i+3] += vD * loopTime
-                        self.x[3*i+4] += vZ * loopTime
-                        self.x[3*i+5] += vGrip * loopTime
+                        if self.stretch:
+                            self.x[3*i+3] += vD * loopTime
+                            self.x[3*i+4] += vZ * loopTime
+                            self.x[3*i+5] += vGrip * loopTime
 
             yield self.x
 
@@ -423,12 +507,14 @@ class runSpec:
             arc_xs = x[3*i] + self.wheel2Center * np.cos(arc_angles)
             arc_ys = x[3*i+1] + self.wheel2Center * np.sin(arc_angles)
             self.robotArc[str(i)].set_data(arc_xs, arc_ys)
-            armpoint1 = helperFuncs.robot2global(x[3*i:3*i+3],[-self.offsetX,0])
-            armpoint2 = helperFuncs.robot2global(x[3*i:3*i+3],[-self.offsetX,-x[3*i+3]])
-            armX = [armpoint1[0],armpoint2[0]]
-            armY = [armpoint1[1],armpoint2[1]]
-            self.robotArm[str(i)].set_data(armX, armY)
-            self.robotArm[str(i)].set_color(self.cm(round(x[self.sizeU*i+4]*232)))
+
+            if self.stretch:
+                armpoint1 = helperFuncs.robot2global(x[3*i:3*i+3],[-self.offsetX,0])
+                armpoint2 = helperFuncs.robot2global(x[3*i:3*i+3],[-self.offsetX,-x[3*i+3]])
+                armX = [armpoint1[0],armpoint2[0]]
+                armY = [armpoint1[1],armpoint2[1]]
+                self.robotArm[str(i)].set_data(armX, armY)
+                self.robotArm[str(i)].set_color(self.cm(round(x[self.sizeU*i+4]*232)))
             self.objects.set_data(self.xR[0],self.xR[1])
         return self.robots
 
@@ -684,12 +770,15 @@ class runSpec:
 
     def sigint_handler(self,sig,frame):
         print('made it to close')
+        if self.rosRobot:
+            averageTime = sum(self.rosTime)/len(self.rosTime)
+            print('Average update time for robot: {}'.format(averageTime))
         self.running = False
         self.master.destroy()
 
 
-def initializeRobot(realRobots):
-    if realRobots:
+def initializeRobot(realRobots, simType):
+    if realRobots and simType == 'stretch':
         import stretch_body.robot
         robot = stretch_body.robot.Robot()
         robot.startup()
@@ -698,6 +787,8 @@ def initializeRobot(realRobots):
         robot.lift.move_to(1)
         robot.arm.move_to(0)
         robot.push_command()
+    elif realRobots and simType == 'ros':
+        robot = True
     else:
         robot = None
 
@@ -715,20 +806,21 @@ def stopRobot(robot):
     robot.push_command()
 
 if __name__ == "__main__":
-    realRobots = 0 # Use simulation mode if True
+    realRobots = 1 # Use simulation mode if True
     logData = 0 # log data if True
-
-    robot = initializeRobot(realRobots)
+    # simType can be sim, stretch, or ros
+    simType = 'ros'
+    robot = initializeRobot(realRobots,simType)
 
     try:
-        f = runSpec(robot,logData)
+        f = runSpec(robot,simType,logData)
         f.makeForm()
         tk.mainloop()
     except:
         pass
     finally:
         # Stop the robot
-        if realRobots:
+        if realRobots and simType == 'stretch':
             print('Stopping robot')
             stopRobot(robot)
             print('robot stopped!')

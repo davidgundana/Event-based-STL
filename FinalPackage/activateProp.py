@@ -11,7 +11,7 @@ import matrixDijkstra
 import itertools
 
 
-def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU):
+def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU,sizeState):
     allProps2Activate = []
     allRobustness = []
     specToDelete= []
@@ -64,7 +64,7 @@ def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU):
                     else:
                         paths2Consider.append(specattr[b].nRoutes[potState,reachableAcceptCycle[j]])
             paths2Consider = [item for sublist in paths2Consider for item in sublist]
-            if np.size(paths2Consider) == 0:
+            if len(paths2Consider) == 0:
                 print('no paths!')
 
             # check if path is valid with uncontrollable propositions
@@ -127,18 +127,18 @@ def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU):
                 print('No transitions')
             maxLoc = np.argwhere(numMax == np.amax(numMax)).ravel()
 
-            ids = []
+            conflictOrder = []
             if np.size(maxLoc) == 1:
                 # only one maximum robustness
                 trans2Make = allTransitions[maxLoc[0]]
                 if np.all(trans2Make == np.inf):
                     robustness = []
                 else:
-                    trans2Make,robustness, ids = pickTransition(specattr[b], np.array([trans2Make]), x, props, t, wall, xR, preF,roadmap,maxV,sizeU)
+                    trans2Make,robustness, conflictOrder = pickTransition(specattr[b], np.array([trans2Make]), x, props, t, wall, xR, preF,roadmap,maxV,sizeU,sizeState)
             else:
                 # Need to break the tie by computing robustness for those that are tied
                 allTransMax = allTransitions[maxLoc, :]
-                trans2Make,robustness, ids = pickTransition(specattr[b], allTransMax, x, props, t, wall, xR, preF,roadmap,maxV,sizeU)
+                trans2Make,robustness, conflictOrder = pickTransition(specattr[b], allTransMax, x, props, t, wall, xR, preF,roadmap,maxV,sizeU,sizeState)
 
             stateLoc = np.where((allTransitions == trans2Make).all(axis=1))[0][0]
             potS[b] = int(allTransitionsWithState[stateLoc, -1])
@@ -152,7 +152,7 @@ def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU):
             allProps2Activate.append(props2Activate)
             allRobustness.append(robustness)
             # print(time.time()-t1)
-        except:
+        except Exception as e:
             print('No state. Deleteing Buchi')
             specToDelete.append(b)
 
@@ -162,7 +162,8 @@ def activate(specattr,potS,roadmap,preF,conditions,x,xR,t,maxV,sizeU):
 
     if len(specToDelete) > 0:
         specattr.pop(specToDelete[0])
-    return specattr,props2Activate,potS,robustness, ids
+
+    return specattr,props2Activate,potS,robustness, conflictOrder
 
 def pickSpec(specattr,allRobustness, potS, allProps2Activate):
     option = 1
@@ -292,11 +293,11 @@ def addCNF(specattr, sFrom, sTo, i = False):
 
 
     return specattr
-def pickTransition(specattr,allTransMax,x,props,t,wall,xR,preF, roadmap,maxV,sizeU):
+def pickTransition(specattr,allTransMax,x,props,t,wall,xR,preF, roadmap,maxV,sizeU, sizeState):
     allRobust = []
     weights = [5, .75]  # What is already true, what is false right now
     allRobustId = []
-
+    conflictOrder = []
     for i in range(np.size(allTransMax,0)):
         indOfActive = np.where(allTransMax[i,:]==1)[0]
         phiIndex = [specattr.controllablePropOrder[s] for s in indOfActive]
@@ -331,17 +332,17 @@ def pickTransition(specattr,allTransMax,x,props,t,wall,xR,preF, roadmap,maxV,siz
                     ids.append(unsatisfiedPhi[j].id)
             # Check to see if nominal controllers actually conflict
             conflict = 0
-            # if len(phiRobot) >= 1:
-            #     sumNom = np.zeros((1,np.size(phiRobot[0].nom,1)))
-            #     for iii in range(np.size(phiRobot)):
-            #         sumNom+=phiRobot[iii].nom[1,:]
-            #     for iii in range(np.size(phiRobot)):
-            #         for jj in range(np.size(phiRobot[iii].nom,1)):
-            #             if phiRobot[iii].nom[1,jj] > 0 and not phiRobot[iii].nom[1,jj] == sumNom[0,jj]:
-            #                 conflict = 1
-            #                 break
-            # else:
-            #     conflict = 1
+            if len(phiRobot) >= 1:
+                sumNom = np.zeros((1,np.size(phiRobot[0].nom,1)))
+                for iii in range(np.size(phiRobot)):
+                    sumNom+=phiRobot[iii].nom[1,:]
+                for iii in range(np.size(phiRobot)):
+                    for jj in range(np.size(phiRobot[iii].nom,1)):
+                        if phiRobot[iii].nom[1,jj] > 0 and not phiRobot[iii].nom[1,jj] == sumNom[0,jj]:
+                            conflict = 1
+                            break
+            else:
+                conflict = 1
             ####
             if len(phiRobot) == 1 or conflict == 0:
                 for iii in range(np.size(phiRobot)):
@@ -369,27 +370,21 @@ def pickTransition(specattr,allTransMax,x,props,t,wall,xR,preF, roadmap,maxV,siz
                     idsRow = []
                     for k in range(np.size(possOrders[j],0)):
                         if k == 0:
-                            if robustRef[phiRobot[possOrders[j][k]].id] is None:
-                                totalDist = phiRobot[possOrders[j][k]].distFromSafe
-                                time2Finish = phiRobot[possOrders[j][k]].time2Finish
+                            totalDist = phiRobot[possOrders[j][k]].distFromSafe
+                            time2Finish = phiRobot[possOrders[j][k]].time2Finish
 
-                                if preF == 1 and not isinstance(phiRobot[0].t_e, float):
-                                    timeRemaining = phiRobot[0].b
-                                else:
-                                    if isinstance(phiRobot[0].t_e, float):
-                                        timeRemaining = (phiRobot[0].b + phiRobot[0].t_e) - t
-                                    else:
-                                        timeRemaining = phiRobot[0].b - t
-                                timeBuffer = timeRemaining - time2Finish
-                                time2FinishPrev += time2Finish
-                                robtemp = weights[1] * timeBuffer
-                                robustRef[phiRobot[possOrders[j][k]].id] = robtemp
-                                distFromSafeRef[phiRobot[possOrders[j][k]].id] = totalDist
-                                robustRow.append(robtemp)
-                                idsRow.append(phiRobot[possOrders[j][k]].id)
+                            if preF == 1 and not isinstance(phiRobot[0].t_e, float):
+                                timeRemaining = phiRobot[0].b
                             else:
-                                robustRow.append(robustRef[phiRobot[possOrders[j][k]].id])
-                                idsRow.append(phiRobot[possOrders[j][k]].id)
+                                if isinstance(phiRobot[0].t_e, float):
+                                    timeRemaining = (phiRobot[0].b + phiRobot[0].t_e) - t
+                                else:
+                                    timeRemaining = phiRobot[0].b - t
+                            timeBuffer = timeRemaining - time2Finish
+                            time2FinishPrev += time2Finish
+                            robtemp = weights[1] * timeBuffer
+                            robustRow.append(robtemp)
+                            idsRow.append(phiRobot[possOrders[j][k]].id)
                         else:
                             xTemp = copy.deepcopy(x)
                             pPoint = phiRobot[possOrders[j][k-1]].point
@@ -399,7 +394,7 @@ def pickTransition(specattr,allTransMax,x,props,t,wall,xR,preF, roadmap,maxV,siz
                             except:
                                 print('conflict')
                             xTemp[phiRobot[possOrders[j][k]].nom[0, 0:2].astype('int')] = pPoint
-                            nom, costTemp = getNom(phiRobot[possOrders[j][k]], roadmap, xTemp, xR, maxV,sizeU)
+                            nom, costTemp,_ = getNom(phiRobot[possOrders[j][k]], roadmap, xTemp, xR, maxV,sizeU,sizeState)
                             distFromSafe2 = phiRobot[possOrders[j][k-1]].distFromSafe + costTemp
                             signF = phiRobot[possOrders[j][k]].signFS[0]
                             totalDist = distFromSafe2 + signF * phiRobot[possOrders[j][k]].p
@@ -443,6 +438,7 @@ def pickTransition(specattr,allTransMax,x,props,t,wall,xR,preF, roadmap,maxV,siz
                         indOfTrans = 0
                 robustness.extend(robustnessTEMP[indOfTrans])
                 ids.extend(idsTEMP[indOfTrans])
+                conflictOrder = idsTEMP[indOfTrans]
 
         allRobust.append(robustness)
         allRobustId.append(ids)
@@ -486,7 +482,7 @@ def pickTransition(specattr,allTransMax,x,props,t,wall,xR,preF, roadmap,maxV,siz
     robustness = allRobust[np.where(np.all(allTransMax == trans2Make,axis=1))[0][0]]
     ids = allRobustId[np.where(np.all(allTransMax == trans2Make,axis=1))[0][0]]
 
-    return trans2Make, robustness,ids
+    return trans2Make, robustness,conflictOrder
 
 def checkUntil(specattr, allTransitions):
     for i in range(np.size(specattr.Pi_mu)):

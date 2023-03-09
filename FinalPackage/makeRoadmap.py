@@ -65,7 +65,7 @@ class mapInfo():
                     message = '\nCreating Roadmap. ' + complete_status
                 else:
                     message = '\nCreating Roadmap. ' + complete_status + '\n'
-                runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData,text1,master,message)
+                # runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData,text1,master,message)
 
             print('Total time to create roadmap was {} seconds'.format(time.time()-t1))
 
@@ -113,7 +113,7 @@ class mapInfo():
                 else:
                     message = '\nFinding routes in roadmap. ' + complete_status + '\n'
 
-                runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData,text1,master,message)
+                # runEvBasedSTL.formData.updateStatus(runEvBasedSTL.formData,text1,master,message)
 
             print('Total time to create node connections in roadmap was {} seconds'.format(time.time()-t1))
 
