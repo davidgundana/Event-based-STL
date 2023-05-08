@@ -124,7 +124,9 @@ def evBarrier(pi, t, x, xR ,wall,roadmap, preF,linear):
         try:
             bxt_i = eval(pi.cbf)
         except:
-            print('here')
+            pi.t_e = 0
+            bxt_i = eval(pi.cbf)
+
         bxt_i = bxt_i - hxt
 
         if 'x[2]' in pi.hxt:
@@ -156,7 +158,7 @@ def alBarrier(pi, t, x, xR ,wall, roadmap, preF):
     # compute the barrier function
     valOfFunc = eval(pi.hxt)
     bxt_i = 1 * signF * (-p + eval(pi.hxt))
-    bxt_i = 1 * signF * (-p + eval(pi.hxt))**3
+    bxt_i = 5 * signF * (-(p + signF*.5*p) + eval(pi.hxt))
 
     # This is optional. For speed, if the robot is "far enough" from violation, we will ignore this. Can
     # be commented out

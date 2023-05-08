@@ -9,7 +9,7 @@ findWalls = 0;
 addoffset = 0;
 
 % Filenames
-fileOfI = 'rhodesFinal';
+fileOfI = 'hallwaymap';
 
 yamlFile = readlines(strcat(fileOfI,'.yaml'));
 offString = yamlFile(3);
@@ -59,7 +59,7 @@ plot(33, -18.25, 'bo')
 % xlim([-10 20]);
 % ylim([-10 10]);
 % n is the number of points you want to click
-n = 1;
+n = 0;
 [x,y] = ginput(n);
 
 if findWalls == 1

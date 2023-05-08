@@ -1,1 +1,1 @@
-G(((pickup1) => ((ev_[0,30] ((sqrt[[pos[0]-17]^2+[pos[1]-2]^2]<1) &  (alw_[0,50] sqrt[[pos[0]-wall[0]]^2+[pos[1]-wall[1]]^2]>0.4))
+G(((pickup1) => ((ev_[0,30] ((sqrt[[pos[0]+9]^2+[pos[1]-17.75]^2]<1) &  (alw_[0,50] sqrt[[pos[0]-wall[0]]^2+[pos[1]-wall[1]]^2]>0.4))

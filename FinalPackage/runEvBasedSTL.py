@@ -31,22 +31,22 @@ import helperFuncs
 import forwardBuchi
 from datetime import datetime
 import signal
-from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
+from geometry_msgs.msg import PoseWithCovarianceStamped, Twist,PoseStamped
 import threading
 
 class runSpec:
-    def __init__(self,robot,simType, logData):
+    def __init__(self,robot,simType, logData, trackObs):
         self.robot = robot
         self.sizeState = 3 # state size of a robot
         self.sizeU = 3 # size of the control input
         # self.sizeU = 5 # size of the control input
 
         self.initialState = '0,0,0' # initial state of the system
-        self.maxV = '0.8,0.8,0.8' #Maximum velocity
+        self.maxV = '0.4,0.4,0.4' #Maximum velocity
         # self.maxV = '0.2,0.2,0.05,0.1,12' #Maximum velocity
 
         # stretch reference values
-        self.initialStateRef = '5,-3' # Initial state of reference objects
+        self.initialStateRef = '5,-3,0,0' # Initial state of reference objects
         self.linearControl = 1 # Control affine system (default is True)
         self.running = True # initialize the system to run
         self.logData = logData # Log data flag
@@ -63,14 +63,15 @@ class runSpec:
         # Default spec location
         mainDirectory = os.path.dirname(os.path.abspath(__file__))
         self.filenames = []
-        self.filenames.append(os.path.join(mainDirectory, 'Specs','NRISPEC.txt'))
+        self.filenames.append(os.path.join(mainDirectory, 'Specs','follow_spec.txt'))
         self.filenames.append(os.path.join(mainDirectory, 'buchiRef.txt'))
-        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'rhodesFinal_walls.txt'))
-        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'rhodesFinal_waypoints.txt'))
+        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'openMap.txt'))
+        self.filenames.append(os.path.join(mainDirectory, 'Maps', 'hallwaymap_waypoints.txt'))
         self.filenames.append(os.path.join(mainDirectory, 'Maps', ''))
         self.filenames.append(os.path.join(mainDirectory, 'Maps', ''))
         self.stretch = 0
         self.rosRobot = 0
+        self.trackObs = trackObs
         if simType == 'stretch' and robot is not None:
             self.stretch = 1
         if simType == 'ros' and robot is not None:
@@ -173,6 +174,20 @@ class runSpec:
         if id == 35 and position != []:
             self.objectPosition5 = position
 
+    def objectTracking(self, data):
+        position = [data.pose.position.x,data.pose.position.z]
+        self.xR[0] = position[0]
+        self.xR[1] = position[1]
+
+    def jackalPoseOpti(self,data):
+        position = [data.pose.position.x, data.pose.position.z]
+        self.position = 3*[[]]
+        self.position[0] = position[0]
+        self.position[1] = position[1]
+        newRot = (data.pose.orientation.x, data.pose.orientation.z,
+                                           -data.pose.orientation.y, data.pose.orientation.w)
+        self.position[2] = quaternion_to_euler(newRot)[2]
+        self.position[2] = self.transform_to_pipi((np.pi / 180) * (self.position[2]))[0]
     def jackalPose(self, data):
         try:
             oldPosition = self.position[0:2]
@@ -222,7 +237,15 @@ class runSpec:
         print('starting ros listener')
         rospy.init_node('listener', anonymous=True)
 
-        rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, self.jackalPose, queue_size=1)
+        amclLocal = 0
+
+        if amclLocal:
+            rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, self.jackalPose, queue_size=1)
+        else:
+            rospy.Subscriber("/mocap_node/jackal/pose", PoseStamped, self.jackalPoseOpti, queue_size=1)
+
+        rospy.Subscriber("/mocap_node/helmet/pose", PoseStamped, self.objectTracking, queue_size=1)
+
         self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
 
@@ -239,7 +262,7 @@ class runSpec:
     def runSpec(self, specParams):
         if self.robot is not None:
             if self.stretch:
-                clientAddress = "199.168.1.72"
+                clientAddress = "199.168.1.192"
                 optitrackServerAddress = "199.168.1.164"
 
                 # This will create a new NatNet client
@@ -403,11 +426,18 @@ class runSpec:
                         self.x[0] = self.position[0]
                         self.x[1] = self.position[1]
                         self.x[2] = self.position[2]
+                        self.xR[2] = self.position[0]
+                        self.xR[3] = self.position[1]
+                        # if np.sqrt[[self.x[0]-self.xR[0]]^2+[self.x[1]-self.xR[1]]^2]<3:
+                        #     self.xR[2] = self.x[0]
+                        #     self.xR[3] = self.x[1]
+
 
                 # print('t: {}, X: {}, Y: {}, Theta: {}, D: {}, Z: {}, Grip: {}'.format(round(self.t,2),round(self.x[0],2),round(self.x[1],2),
                 #    round(self.x[2],2),round(self.x[3],2),round(self.x[4],2),round(self.x[5],2)))
                 print('t: {}, X: {}, Y: {}, Theta: {}'.format(round(self.t,2),round(self.x[0],2),round(self.x[1],2),
                    round(self.x[2],2)))
+                print(self.xR)
                 if self.rosRobot:
                     try:
                         print('Max localization jump: {} units, latest frame time since loc update: {}s'.format(round(max(self.rosLoc[-1],2)), round(self.rosTimeDiff[-1],2)))
@@ -806,14 +836,15 @@ def stopRobot(robot):
     robot.push_command()
 
 if __name__ == "__main__":
-    realRobots = 1 # Use simulation mode if True
+    realRobots = 0# Use simulation mode if True
     logData = 0 # log data if True
     # simType can be sim, stretch, or ros
+    trackObs = 1 # Switch to decide if there should be dynamic obstacles tracked. Using optitrack right now but can be changed
     simType = 'ros'
     robot = initializeRobot(realRobots,simType)
 
     try:
-        f = runSpec(robot,simType,logData)
+        f = runSpec(robot,simType,logData, trackObs)
         f.makeForm()
         tk.mainloop()
     except:

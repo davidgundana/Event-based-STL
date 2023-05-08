@@ -82,7 +82,11 @@ def getAllNoms(piRobot, maxV,sizeU,conflictOrder):
         sumNom = piRobot[conflictOrder[0]].nom[1,:]
         nominals = np.vstack((nominals, sumNom))
     else:
-        nominals = np.vstack((nominals, sumNom[1, :]))
+        try:
+            nominals = np.vstack((nominals, sumNom[1, :]))
+        except:
+            nominals = np.vstack((nominals, sumNom[0]))
+
 
     return nominals
 
@@ -106,6 +110,11 @@ def getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU,x,sizeState):
     if sizeU == sizeState:
         # convert to v omega
         print('nominalPre ',nomInd)
+        if np.abs(nomInd[0]) < 0.05:
+            nomInd[0] = 0
+        if np.abs(nomInd[1]) < 0.05:
+            nomInd[1]=0
+
         newNom = helperFuncs.feedbackLin(nomInd[0], nomInd[1], x[2], .11, maxV[0])
         nomInd = newNom
         if newNom[0]!=nomInd[0]:
@@ -123,10 +132,10 @@ def getControl(nom,nominals,A,b,maxV,i,bPartialX,sizeU,x,sizeState):
     #     print('here')
     if not qp.result.success:
         print('Specification violated')
-        error = 1
-        # nom[0][3 * i - 3] = 0
-        # nom[0][3 * i - 2] = 0
-        # nom[0][3 * i - 1] = 0
+        # error = 1
+        nom[0][3 * i - 3] = 0
+        nom[0][3 * i - 2] = 0
+        nom[0][3 * i - 1] = 0
     else:
         if sizeU != sizeState:
             nom[0][sizeU*(i-1):sizeU*i] = nomInd
@@ -202,8 +211,8 @@ def evalProps(specattr, roadmap, x,xR,t,maxV,sizeU,sizeState):
             if specattr[i].Pi_mu[j].type == 'ev':
                 if not specattr[i].Pi_mu[j].t_e == []:
                     inputTime = specattr[i].Pi_mu[j].t_e
-                    if t >= specattr[i].Pi_mu[j].a + inputTime and t <= specattr[i].Pi_mu[j].b + inputTime and specattr[i].Pi_mu[j].currentTruth:
-                        specattr[i].Pi_mu[j].satisfied = 1
+                    # if t >= specattr[i].Pi_mu[j].a + inputTime and t <= specattr[i].Pi_mu[j].b + inputTime and specattr[i].Pi_mu[j].currentTruth:
+                    #     specattr[i].Pi_mu[j].satisfied = 1
                 try:
                     if specattr[i].Pi_mu[j].satisfied:
                         exec(specattr[i].Pi_mu[j].prop_label + '=1')
